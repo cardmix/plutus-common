@@ -4,9 +4,11 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
+
 
 module Utils.Tx where
 
@@ -18,7 +20,6 @@ import           Ledger.Constraints      (UnbalancedTx)
 import           Ledger.Tx.CardanoAPI    (ToCardanoError)
 import           Plutus.Contract.Wallet  (ExportTx (..), export)
 import           PlutusTx.Prelude        hiding ((<>))
-import           Prelude                 (undefined)
 
 import           Utils.Network
 
@@ -26,7 +27,4 @@ import           Utils.Network
 
 -- UnbalancedTx to CBOR conversion
 unbalancedTxToCBOR :: NetworkConfig -> UnbalancedTx -> Either ToCardanoError Text
-unbalancedTxToCBOR cfg = fmap (encodeByteString . serialiseToCBOR . partialTx) . f
-    where f utx = case cfg of
-            NetworkConfigMainnet -> undefined
-            NetworkConfigTestnet -> export testnetParams testnetId def utx
+unbalancedTxToCBOR NetworkConfig {networkID, pparams} = fmap (encodeByteString . serialiseToCBOR . partialTx) . export pparams networkID def
