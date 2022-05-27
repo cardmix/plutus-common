@@ -15,7 +15,7 @@ module Utils.ByteString where
 import           PlutusTx.Prelude                  hiding ((<>))
 import           Prelude                           (Char, String)
 
-import           Utils.Common                      (drop)
+import           Utils.Prelude                     (drop)
 
 
 buildByteString :: String -> BuiltinByteString

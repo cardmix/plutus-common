@@ -31,13 +31,14 @@ common lang
 library
     import: lang
     exposed-modules:
-      Requests
       Tokens.Common
       Utils.Address
       Utils.BalanceTx
       Utils.ByteString
       Utils.ChainIndex
+      Utils.Network
       Utils.Tx
+      Utils.Prelude
       Utils.UTXO
     build-depends:
       base                          >= 4.9 && < 5,

@@ -20,13 +20,13 @@ import           Plutus.Contract.Wallet  (ExportTx (..), export)
 import           PlutusTx.Prelude        hiding ((<>))
 import           Prelude                 (undefined)
 
-import           Configuration.PABConfig
+import           Utils.Network
 
 ------------------------ Export/Import of transactions -------------------------
 
 -- UnbalancedTx to CBOR conversion
-unbalancedTxToCBOR :: UnbalancedTx -> Either ToCardanoError Text
-unbalancedTxToCBOR = fmap (encodeByteString . serialiseToCBOR . partialTx) . f
-    where f utx = case pabConfig of
-            PABMainnet -> undefined
-            PABTestnet -> export testnetParams testnetId def utx
+unbalancedTxToCBOR :: NetworkConfig -> UnbalancedTx -> Either ToCardanoError Text
+unbalancedTxToCBOR cfg = fmap (encodeByteString . serialiseToCBOR . partialTx) . f
+    where f utx = case cfg of
+            NetworkConfigMainnet -> undefined
+            NetworkConfigTestnet -> export testnetParams testnetId def utx
