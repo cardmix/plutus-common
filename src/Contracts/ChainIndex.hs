@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 
 
-module Utils.ChainIndex where
+module Contracts.ChainIndex where
 
 import           Cardano.Api                       (FromJSON, ToJSON)
 import           Data.Default                      (def)

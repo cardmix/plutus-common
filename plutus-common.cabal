@@ -31,15 +31,15 @@ common lang
 library
     import: lang
     exposed-modules:
-      Tokens.Common
+      Contracts.ChainIndex
+      Scripts.Constraints
+      Types.TxConstructor
       Utils.Address
       Utils.BalanceTx
       Utils.ByteString
-      Utils.ChainIndex
       Utils.Network
       Utils.Tx
       Utils.Prelude
-      Utils.UTXO
     build-depends:
       base                          >= 4.9 && < 5,
       base16-bytestring                      -any,
