@@ -11,8 +11,8 @@
 
 module Scripts.Constraints where
 
-import qualified Data.Map
 import           Data.Maybe                       (fromJust)
+import qualified Data.Map
 import           Ledger                           hiding (singleton, unspentOutputs, lookup)
 import           Ledger.Constraints.TxConstraints (mustSpendPubKeyOutput, mustSpendScriptOutput, mustPayWithDatumToPubKey, mustPayWithDatumToPubKeyAddress,
                                                     mustPayToOtherScriptAddress, mustPayToOtherScript, mustValidateIn, mustMintValueWithRedeemer)
@@ -21,25 +21,34 @@ import           Ledger.Value                     (getValue)
 import           Plutus.V1.Ledger.Api             (FromData(..))
 import           PlutusTx.AssocMap                (Map, lookup, toList)
 import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mempty)
-import           Prelude                          ((<>), mempty)
+import           Prelude                          ((<>), mempty, undefined)
 
 import           Types.TxConstructor
 
 ----------------------------- On-Chain -------------------------------
 
 {-# INLINABLE utxoSpent #-}
-utxoSpent :: (TxOut -> Bool) -> TxInfo -> Bool
-utxoSpent f info = isJust $ find f ins
+utxoSpent :: TxInfo -> (TxOut -> Bool) -> Bool
+utxoSpent info f = isJust $ find f ins
     where ins = map txInInfoResolved $ txInfoInputs info
 
+{-# INLINABLE utxoReferenced #-}
+utxoReferenced :: TxInfo -> (TxOut -> Bool) -> Bool
+utxoReferenced _ _ = undefined
+
 {-# INLINABLE utxoProduced #-}
-utxoProduced :: (TxOut -> Bool) -> TxInfo -> Bool
-utxoProduced f info = isJust $ find f outs
+utxoProduced :: TxInfo -> (TxOut -> Bool) -> Bool
+utxoProduced info f = isJust $ find f outs
+    where outs = txInfoOutputs info
+
+{-# INLINABLE utxoProducedNumberEq #-}
+utxoProducedNumberEq :: TxInfo -> (TxOut -> Bool) -> Integer -> Bool
+utxoProducedNumberEq info f n = length (filter f outs) == n
     where outs = txInfoOutputs info
 
 {-# INLINABLE utxoProducedInjectiveTxOutRef #-}
-utxoProducedInjectiveTxOutRef :: forall a . (FromData a) => (a -> TxOutRef) -> (TxOut -> Bool) -> ScriptContext -> Bool
-utxoProducedInjectiveTxOutRef g f ctx = isJust $ find (\o -> f o && txOutDatumHash o == dh && isJust dh) outs
+utxoProducedInjectiveTxOutRef :: forall a . (FromData a) => ScriptContext -> (TxOut -> Bool) -> (a -> TxOutRef) -> Bool
+utxoProducedInjectiveTxOutRef ctx f g  = isJust $ find (\o -> f o && txOutDatumHash o == dh && isJust dh) outs
     where
         info = scriptContextTxInfo ctx
         outs = txInfoOutputs info
@@ -49,37 +58,41 @@ utxoProducedInjectiveTxOutRef g f ctx = isJust $ find (\o -> f o && txOutDatumHa
         dh = fmap fst $ find (maybe False (== ownRef) . fmap g . fromBuiltinData . getDatum . snd) (txInfoData info)
 
 {-# INLINABLE utxoProducedInjectiveTokenNames #-}
-utxoProducedInjectiveTokenNames :: forall a . (FromData a) => (a -> (TokenName, Integer)) -> (TxOut -> Bool) -> ScriptContext -> Bool
-utxoProducedInjectiveTokenNames g f ctx = all (\p -> utxoProducedInjectiveTokenName p g f ctx) m
+utxoProducedInjectiveTokenNames :: forall a . (FromData a) => ScriptContext -> (TxOut -> Bool) -> (a -> (TokenName, Integer)) -> Bool
+utxoProducedInjectiveTokenNames ctx f g = all (utxoProducedInjectiveTokenName ctx f g) m
     where
         ownCS = ownCurrencySymbol ctx
         m     = toList $ fromMaybe (error ()) $ lookup ownCS $ getValue $ txInfoMint $ scriptContextTxInfo ctx
 
 {-# INLINABLE utxoProducedInjectiveTokenName #-}
-utxoProducedInjectiveTokenName :: forall a . (FromData a) => (TokenName, Integer) -> (a -> (TokenName, Integer)) -> (TxOut -> Bool) -> ScriptContext -> Bool
-utxoProducedInjectiveTokenName p g f ctx = isJust $ find (\o -> f o && txOutDatumHash o == dh && isJust dh) outs
+utxoProducedInjectiveTokenName :: forall a . (FromData a) => ScriptContext -> (TxOut -> Bool) -> (a -> (TokenName, Integer)) -> (TokenName, Integer) -> Bool
+utxoProducedInjectiveTokenName ctx f g p  = isJust $ find (\o -> f o && txOutDatumHash o == dh && isJust dh) outs
     where
         info = scriptContextTxInfo ctx
         outs = txInfoOutputs info
         dh = fmap fst $ find (maybe False (== p) . fmap g . fromBuiltinData . getDatum . snd) (txInfoData info)
 
+{-# INLINABLE currencyMintedOrBurned #-}
+currencyMintedOrBurned :: TxInfo -> CurrencySymbol -> Bool
+currencyMintedOrBurned info cs = maybe False (not . null) $ lookup cs $ getValue $ txInfoMint info
+
 {-# INLINABLE tokensMinted #-}
-tokensMinted :: Map TokenName Integer -> ScriptContext -> Bool
-tokensMinted expected ctx = actual == Just expected
+tokensMinted :: ScriptContext -> Map TokenName Integer -> Bool
+tokensMinted ctx expected = actual == Just expected
     where
         ownCS  = ownCurrencySymbol ctx
         actual = lookup ownCS $ getValue $ txInfoMint $ scriptContextTxInfo ctx
 
 {-# INLINABLE tokensBurned #-}
-tokensBurned :: Map TokenName Integer -> ScriptContext -> Bool
-tokensBurned expected ctx = actual == Just expected
+tokensBurned :: ScriptContext -> Map TokenName Integer -> Bool
+tokensBurned ctx expected = actual == Just expected
     where
         ownCS  = ownCurrencySymbol ctx
         actual = lookup ownCS $ getValue $ negate $ txInfoMint $ scriptContextTxInfo ctx
 
 {-# INLINABLE validatedInInterval #-}
-validatedInInterval :: POSIXTime -> POSIXTime -> TxInfo -> Bool
-validatedInInterval startTime endTime info = intDeclared `contains` intActual
+validatedInInterval :: TxInfo -> POSIXTime -> POSIXTime ->  Bool
+validatedInInterval info startTime endTime = intDeclared `contains` intActual
     where
         intActual   = txInfoValidRange info
         intDeclared = interval startTime endTime
@@ -89,8 +102,8 @@ timeToValidate :: POSIXTime
 timeToValidate = 600_000
 
 {-# INLINABLE validatedAround #-}
-validatedAround :: POSIXTime -> TxInfo -> Bool
-validatedAround time = validatedInInterval time (time + timeToValidate)
+validatedAround :: TxInfo -> POSIXTime -> Bool
+validatedAround info time = validatedInInterval info time (time + timeToValidate)
 
 -------------------------- Off-Chain -----------------------------
 
@@ -102,9 +115,9 @@ utxoSpentPublicKeyTx f (TxConstructor lookups res) = TxConstructor lookups $
         refs  = Data.Map.keys $ Data.Map.filter (f . toTxOut) utxos
         cond  = not $ null refs
 
-utxoSpentScriptTx :: ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> Redeemer) ->
-    (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
-utxoSpentScriptTx scriptVal red f (TxConstructor lookups res) = TxConstructor lookups $
+utxoSpentScriptTx :: (TxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> Redeemer)
+    -> TxConstructor a i o -> TxConstructor a i o
+utxoSpentScriptTx f scriptVal red (TxConstructor lookups res) = TxConstructor lookups $
         if cond
             then res <> Just (unspentOutputs utxos <> otherScript (scriptVal $ head utxos'), mustSpendScriptOutput (fst $ head utxos') (red $ head utxos'))
             else Nothing
