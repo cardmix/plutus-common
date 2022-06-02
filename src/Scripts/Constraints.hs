@@ -21,7 +21,7 @@ import           Ledger.Value                     (getValue)
 import           Plutus.V1.Ledger.Api             (FromData(..))
 import           PlutusTx.AssocMap                (Map, lookup, toList)
 import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mempty)
-import           Prelude                          ((<>), mempty, undefined)
+import           Prelude                          ((<>), mempty)
 
 import           Types.TxConstructor
 
@@ -32,9 +32,10 @@ utxoSpent :: TxInfo -> (TxOut -> Bool) -> Bool
 utxoSpent info f = isJust $ find f ins
     where ins = map txInInfoResolved $ txInfoInputs info
 
+-- TODO: implement this
 {-# INLINABLE utxoReferenced #-}
 utxoReferenced :: TxInfo -> (TxOut -> Bool) -> Bool
-utxoReferenced _ _ = undefined
+utxoReferenced _ _ = True
 
 {-# INLINABLE utxoProduced #-}
 utxoProduced :: TxInfo -> (TxOut -> Bool) -> Bool
