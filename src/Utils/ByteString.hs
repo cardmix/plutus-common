@@ -30,7 +30,7 @@ instance ToBuiltinByteString Integer where
     toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
         where (q, r) = divMod n 256
 
-instance ToBuiltinByteString a => ToBuiltinByteString [a] where
+instance ToBuiltinByteString [Integer] where
     toBytes []     = emptyByteString
     toBytes (x:xs) = toBytes x `appendByteString` toBytes xs
 
