@@ -28,11 +28,12 @@ import           Types.TxConstructor
 ----------------------------- On-Chain -------------------------------
 
 {-# INLINABLE checkDatum #-}
-checkDatum :: TxInfo -> (Datum -> Bool) -> TxOut -> Bool
-checkDatum info f o = fromJust $ do
-    dh <- txOutDatumHash o
+checkDatum :: FromData a => TxInfo -> (a -> Bool) -> Maybe TxOut -> Bool
+checkDatum info f x = fromJust $ do
+    o   <- x
+    dh  <- txOutDatumHash o
     dat <- findDatum dh info
-    return $ f dat
+    fmap f $ fromBuiltinData $ getDatum dat
 
 {-# INLINABLE findUtxoSpent #-}
 findUtxoSpent :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
