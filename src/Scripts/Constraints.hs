@@ -27,20 +27,35 @@ import           Types.TxConstructor
 
 ----------------------------- On-Chain -------------------------------
 
+{-# INLINABLE checkDatum #-}
+checkDatum :: TxInfo -> (Datum -> Bool) -> TxOut -> Bool
+checkDatum info f o = fromJust $ do
+    dh <- txOutDatumHash o
+    dat <- findDatum dh info
+    return $ f dat
+
+{-# INLINABLE findUtxoSpent #-}
+findUtxoSpent :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
+findUtxoSpent info f = find f ins
+    where ins = map txInInfoResolved $ txInfoInputs info
+
 {-# INLINABLE utxoSpent #-}
 utxoSpent :: TxInfo -> (TxOut -> Bool) -> Bool
-utxoSpent info f = isJust $ find f ins
-    where ins = map txInInfoResolved $ txInfoInputs info
+utxoSpent info = isJust . findUtxoSpent info
 
 -- TODO: implement this
 {-# INLINABLE utxoReferenced #-}
 utxoReferenced :: TxInfo -> (TxOut -> Bool) -> Bool
 utxoReferenced _ _ = True
 
+{-# INLINABLE findUtxoProduced #-}
+findUtxoProduced :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
+findUtxoProduced info f = find f outs
+    where outs = txInfoOutputs info
+
 {-# INLINABLE utxoProduced #-}
 utxoProduced :: TxInfo -> (TxOut -> Bool) -> Bool
-utxoProduced info f = isJust $ find f outs
-    where outs = txInfoOutputs info
+utxoProduced info = isJust . findUtxoProduced info
 
 {-# INLINABLE utxoProducedNumberEq #-}
 utxoProducedNumberEq :: TxInfo -> (TxOut -> Bool) -> Integer -> Bool
