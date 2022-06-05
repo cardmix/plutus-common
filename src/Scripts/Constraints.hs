@@ -106,6 +106,18 @@ timeToValidate = 600_000
 validatedAround :: TxInfo -> POSIXTime -> Bool
 validatedAround info time = validatedInInterval info time (time + timeToValidate)
 
+{-# INLINABLE getUpperTimeEstimate #-}
+getUpperTimeEstimate :: TxInfo -> POSIXTime
+getUpperTimeEstimate info = case ivTo (txInfoValidRange info) of
+                                UpperBound (Finite t) _ -> t
+                                _                       -> error ()
+
+{-# INLINABLE getLowerTimeEstimate #-}
+getLowerTimeEstimate :: TxInfo -> POSIXTime
+getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
+                                LowerBound (Finite t) _ -> t
+                                _                       -> error ()
+
 -------------------------- Off-Chain -----------------------------
 
 utxoSpentPublicKeyTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
