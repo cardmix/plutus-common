@@ -21,16 +21,19 @@ class ToBuiltinByteString a where
     toBytes :: a -> BuiltinByteString
 
 instance ToBuiltinByteString String where
+    {-# INLINABLE toBytes #-}
     toBytes str = foldr (consByteString . g) emptyByteString (f str)
         where
             f s = if length s > 1 then take 2 s : f (drop 2 s) else []
             g s = charToHex (head s) * 16 + charToHex (s !! 1)
 
 instance ToBuiltinByteString Integer where
+    {-# INLINABLE toBytes #-}
     toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
         where (q, r) = divMod n 256
 
 instance ToBuiltinByteString [Integer] where
+    {-# INLINABLE toBytes #-}
     toBytes []     = emptyByteString
     toBytes (x:xs) = toBytes x `appendByteString` toBytes xs
 
