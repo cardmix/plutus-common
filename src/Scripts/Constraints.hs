@@ -29,7 +29,7 @@ import           Types.TxConstructor
 
 {-# INLINABLE checkDatum #-}
 checkDatum :: FromData a => TxInfo -> (a -> Bool) -> Maybe TxOut -> Bool
-checkDatum info f x = fromJust $ do
+checkDatum info f x = fromMaybe False $ do
     o   <- x
     dh  <- txOutDatumHash o
     dat <- findDatum dh info
