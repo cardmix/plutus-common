@@ -32,10 +32,10 @@ instance ToBuiltinByteString Integer where
     toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
         where (q, r) = divMod n 256
 
-instance ToBuiltinByteString [Integer] where
-    {-# INLINABLE toBytes #-}
-    toBytes []     = emptyByteString
-    toBytes (x:xs) = toBytes x `appendByteString` toBytes xs
+-- instance ToBuiltinByteString [Integer] where
+--     {-# INLINABLE toBytes #-}
+--     toBytes []     = emptyByteString
+--     toBytes (x:xs) = toBytes x `appendByteString` toBytes xs
 
 charToHex :: Char -> Integer
 charToHex '0' = 0
@@ -56,5 +56,10 @@ charToHex 'e' = 14
 charToHex 'f' = 15
 charToHex _   = error ()
 
+{-# INLINABLE byteStringToList #-}
 byteStringToList :: BuiltinByteString -> [Integer]
 byteStringToList bs = map (indexByteString bs) [0..lengthOfByteString bs-1]
+
+{-# INLINABLE listToByteString #-}
+listToByteString :: [Integer] -> BuiltinByteString
+listToByteString = foldr (appendByteString . toBytes) emptyByteString
