@@ -32,6 +32,10 @@ instance ToBuiltinByteString Integer where
     toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
         where (q, r) = divMod n 256
 
+instance ToBuiltinByteString [Integer] where
+    {-# INLINABLE toBytes #-}
+    toBytes = foldr (appendByteString . toBytes) emptyByteString
+
 charToHex :: Char -> Integer
 charToHex '0' = 0
 charToHex '1' = 1
@@ -54,8 +58,3 @@ charToHex _   = error ()
 {-# INLINABLE byteStringToList #-}
 byteStringToList :: BuiltinByteString -> [Integer]
 byteStringToList bs = map (indexByteString bs) [0..lengthOfByteString bs-1]
-
--- We cannot use ToBuiltinByteString due to Plutus Script error
-{-# INLINABLE listToByteString #-}
-listToByteString :: [Integer] -> BuiltinByteString
-listToByteString = foldr (appendByteString . toBytes) emptyByteString
