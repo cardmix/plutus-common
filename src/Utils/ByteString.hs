@@ -27,6 +27,11 @@ instance ToBuiltinByteString String where
             f s = if length s > 1 then take 2 s : f (drop 2 s) else []
             g s = charToHex (head s) * 16 + charToHex (s !! 1)
 
+instance ToBuiltinByteString Bool where
+    {-# INLINABLE toBytes #-}
+    toBytes False = consByteString 0 emptyByteString
+    toBytes True  = consByteString 1 emptyByteString
+
 instance ToBuiltinByteString Integer where
     {-# INLINABLE toBytes #-}
     toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
