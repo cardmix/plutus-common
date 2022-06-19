@@ -89,6 +89,12 @@ utxoProducedInjectiveTokenName ctx f g p  = isJust $ find (\o -> f o && txOutDat
         outs = txInfoOutputs info
         dh = fmap fst $ find (maybe False (== p) . fmap g . fromBuiltinData . getDatum . snd) (txInfoData info)
 
+{-# INLINABLE checkOwnInput #-}
+checkOwnInput :: ScriptContext -> (TxOut -> Bool) -> Bool
+checkOwnInput ctx f = fromMaybe False $ do
+    o <- findOwnInput ctx
+    return $ f $ txInInfoResolved o
+
 {-# INLINABLE currencyMintedOrBurned #-}
 currencyMintedOrBurned :: TxInfo -> CurrencySymbol -> Bool
 currencyMintedOrBurned info cs = maybe False (not . null) $ lookup cs $ getValue $ txInfoMint info
