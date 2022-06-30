@@ -45,9 +45,13 @@ utxoSpent :: TxInfo -> (TxOut -> Bool) -> Bool
 utxoSpent info = isJust . findUtxoSpent info
 
 -- TODO: implement this
+{-# INLINABLE findUtxoReferenced #-}
+findUtxoReferenced :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
+findUtxoReferenced _ _ = Nothing
+
 {-# INLINABLE utxoReferenced #-}
 utxoReferenced :: TxInfo -> (TxOut -> Bool) -> Bool
-utxoReferenced _ _ = True
+utxoReferenced info = isJust . findUtxoReferenced info
 
 {-# INLINABLE findUtxoProduced #-}
 findUtxoProduced :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
