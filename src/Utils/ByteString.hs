@@ -63,3 +63,7 @@ charToHex _   = error ()
 {-# INLINABLE byteStringToList #-}
 byteStringToList :: BuiltinByteString -> [Integer]
 byteStringToList bs = map (indexByteString bs) [0..lengthOfByteString bs-1]
+
+{-# INLINABLE byteStringToInteger #-}
+byteStringToInteger :: BuiltinByteString -> Integer
+byteStringToInteger bs = foldr (\d n -> 256*n + d) 0 (byteStringToList bs)
