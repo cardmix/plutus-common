@@ -34,12 +34,24 @@ instance ToBuiltinByteString Bool where
 
 instance ToBuiltinByteString Integer where
     {-# INLINABLE toBytes #-}
-    toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
-        where (q, r) = divMod n 256
+    toBytes = integerToByteString
 
 instance ToBuiltinByteString [Integer] where
     {-# INLINABLE toBytes #-}
     toBytes = foldr (appendByteString . toBytes) emptyByteString
+
+{-# INLINABLE integerToByteString #-}
+integerToByteString :: Integer -> BuiltinByteString
+integerToByteString n = consByteString r $ if q > 0 then integerToByteString q else emptyByteString
+    where (q, r) = divMod n 256
+
+{-# INLINABLE byteStringToList #-}
+byteStringToList :: BuiltinByteString -> [Integer]
+byteStringToList bs = map (indexByteString bs) [0..lengthOfByteString bs-1]
+
+{-# INLINABLE byteStringToInteger #-}
+byteStringToInteger :: BuiltinByteString -> Integer
+byteStringToInteger bs = foldr (\d n -> 256*n + d) 0 (byteStringToList bs)
 
 charToHex :: Char -> Integer
 charToHex '0' = 0
@@ -59,11 +71,3 @@ charToHex 'd' = 13
 charToHex 'e' = 14
 charToHex 'f' = 15
 charToHex _   = error ()
-
-{-# INLINABLE byteStringToList #-}
-byteStringToList :: BuiltinByteString -> [Integer]
-byteStringToList bs = map (indexByteString bs) [0..lengthOfByteString bs-1]
-
-{-# INLINABLE byteStringToInteger #-}
-byteStringToInteger :: BuiltinByteString -> Integer
-byteStringToInteger bs = foldr (\d n -> 256*n + d) 0 (byteStringToList bs)
