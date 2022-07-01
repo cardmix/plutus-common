@@ -47,7 +47,7 @@ integerToByteString n = consByteString r $ if q > 0 then integerToByteString q e
 
 {-# INLINABLE byteStringToList #-}
 byteStringToList :: BuiltinByteString -> [Integer]
-byteStringToList bs = map (indexByteString bs) [0..lengthOfByteString bs-1]
+byteStringToList bs = indexByteString bs 0 : byteStringToList (dropByteString 1 bs)
 
 {-# INLINABLE byteStringToInteger #-}
 byteStringToInteger :: BuiltinByteString -> Integer
