@@ -167,6 +167,9 @@ utxoSpentScriptTx f scriptVal red (TxConstructor lookups res) = TxConstructor lo
         utxos' = Data.Map.toList $ Data.Map.filter (f . toTxOut) utxos
         cond  = not $ null utxos'
 
+utxoReferencedTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
+utxoReferencedTx _ = id
+
 utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> TxConstructor a i o -> TxConstructor a i o
 utxoProducedPublicKeyTx pkh skh val dat (TxConstructor lookups res) = TxConstructor lookups $
         if isJust skh
