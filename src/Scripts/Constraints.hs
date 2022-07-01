@@ -24,6 +24,7 @@ import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), 
 import           Prelude                          ((<>), mempty)
 
 import           Types.TxConstructor
+import PlutusTx.IsData (ToData(..))
 
 ----------------------------- On-Chain -------------------------------
 
@@ -177,14 +178,13 @@ utxoProducedScriptTx vh svh val dat (TxConstructor lookups res) = TxConstructor 
             then res <> Just (mempty, mustPayToOtherScriptAddress vh (fromJust svh) dat val)
             else res <> Just (mempty, mustPayToOtherScript vh dat val)
 
-tokensMintedTx :: MintingPolicy -> Redeemer -> Value -> TxConstructor a i o -> TxConstructor a i o
+tokensMintedTx :: ToData a => MintingPolicy -> a -> Value -> TxConstructor a i o -> TxConstructor a i o
 tokensMintedTx mp r v (TxConstructor lookups res) = TxConstructor lookups $
-        res <> Just (mintingPolicy mp, mustMintValueWithRedeemer r v)
+        res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData r) v)
 
-
-tokensBurnedTx :: MintingPolicy -> Redeemer -> Value -> TxConstructor a i o -> TxConstructor a i o
+tokensBurnedTx :: ToData a => MintingPolicy -> a -> Value -> TxConstructor a i o -> TxConstructor a i o
 tokensBurnedTx mp r v (TxConstructor lookups res) = TxConstructor lookups $
-        res <> Just (mintingPolicy mp, mustMintValueWithRedeemer r (negate v))
+        res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData r) (negate v))
 
 validatedInIntervalTx :: POSIXTime -> POSIXTime -> TxConstructor a i o -> TxConstructor a i o
 validatedInIntervalTx startTime endTime (TxConstructor lookups res) = TxConstructor lookups $
