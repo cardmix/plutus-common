@@ -147,30 +147,34 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 
 -------------------------- Off-Chain -----------------------------
 
-utxoSpentPublicKeyTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
-utxoSpentPublicKeyTx f constr@(TxConstructor _ _ lookups res) = constr { txConstructorResult = res <>
-        if cond then Just (unspentOutputs utxos, mustSpendPubKeyOutput $ head refs) else Nothing
+utxoSpentPublicKeyTx :: Bool -> (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
+utxoSpentPublicKeyTx optional f constr@(TxConstructor _ _ lookups res) = constr { txConstructorResult = res <>
+        if not $ null refs
+            then Just (unspentOutputs utxos, mustSpendPubKeyOutput $ head refs)
+            else if optional
+                then Just (mempty, mempty)
+                else Nothing
     }
     where
         utxos = Data.Map.map fst lookups
         refs  = Data.Map.keys $ Data.Map.filterWithKey f utxos
-        cond  = not $ null refs
 
-utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
+utxoSpentScriptTx :: ToData r => Bool -> (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
     (TxOutRef -> ChainIndexTxOut -> r) -> TxConstructor a i o -> TxConstructor a i o
-utxoSpentScriptTx f scriptVal red constr@(TxConstructor _ _ lookups res) = constr { txConstructorResult = res <>
-        if cond
+utxoSpentScriptTx optional f scriptVal red constr@(TxConstructor _ _ lookups res) = constr { txConstructorResult = res <>
+        if not $ null utxos'
             then Just (unspentOutputs utxos <> otherScript (uncurry scriptVal $ head utxos'),
                 mustSpendScriptOutput (fst $ head utxos') (Redeemer $ toBuiltinData $ uncurry red $ head utxos'))
-            else Nothing
+            else if optional
+                then Just (mempty, mempty)
+                else Nothing
     }
     where
         utxos  = Data.Map.map fst lookups
         utxos' = Data.Map.toList $ Data.Map.filterWithKey f utxos
-        cond  = not $ null utxos'
 
-utxoReferencedTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
-utxoReferencedTx _ = undefined
+utxoReferencedTx :: Bool -> (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
+utxoReferencedTx _ _ = undefined
 
 utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> TxConstructor a i o -> TxConstructor a i o
 utxoProducedPublicKeyTx pkh skh val dat constr@(TxConstructor _ _ _ res) = constr { txConstructorResult = res <>
