@@ -22,7 +22,7 @@ import           Plutus.V1.Ledger.Api             (FromData(..))
 import           PlutusTx.AssocMap                (Map, lookup, toList)
 import           PlutusTx.IsData                  (ToData(..))
 import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mempty)
-import           Prelude                          ((<>), mempty)
+import           Prelude                          ((<>), mempty, undefined)
 
 import           Types.TxConstructor
 
@@ -147,30 +147,30 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 
 -------------------------- Off-Chain -----------------------------
 
-utxoSpentPublicKeyTx :: (TxOutRef -> TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
+utxoSpentPublicKeyTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
 utxoSpentPublicKeyTx f constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
         if cond then Just (unspentOutputs utxos, mustSpendPubKeyOutput $ head refs) else Nothing
     }
     where
         utxos = Data.Map.map fst lookups
-        refs  = Data.Map.keys $ Data.Map.filterWithKey (\ref -> f ref . toTxOut) utxos
+        refs  = Data.Map.keys $ Data.Map.filterWithKey f utxos
         cond  = not $ null refs
 
-utxoSpentScriptTx :: ToData r => (TxOutRef -> TxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> r)
+utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> r)
     -> TxConstructor a i o -> TxConstructor a i o
 utxoSpentScriptTx f scriptVal red constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
         if cond
-            then Just (unspentOutputs utxos <> otherScript (scriptVal $ head utxos'), 
+            then Just (unspentOutputs utxos <> otherScript (scriptVal $ head utxos'),
                 mustSpendScriptOutput (fst $ head utxos') (Redeemer $ toBuiltinData $ red $ head utxos'))
             else Nothing
     }
     where
         utxos  = Data.Map.map fst lookups
-        utxos' = Data.Map.toList $ Data.Map.filterWithKey (\ref -> f ref . toTxOut) utxos
+        utxos' = Data.Map.toList $ Data.Map.filterWithKey f utxos
         cond  = not $ null utxos'
 
-utxoReferencedTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
-utxoReferencedTx _ = id
+utxoReferencedTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
+utxoReferencedTx _ = undefined
 
 utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> TxConstructor a i o -> TxConstructor a i o
 utxoProducedPublicKeyTx pkh skh val dat constr@(TxConstructor _ _ res) = constr { txConstructorResult = res <>
