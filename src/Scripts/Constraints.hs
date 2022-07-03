@@ -147,16 +147,16 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 
 -------------------------- Off-Chain -----------------------------
 
-utxoSpentPublicKeyTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
+utxoSpentPublicKeyTx :: (TxOutRef -> TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
 utxoSpentPublicKeyTx f constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
         if cond then Just (unspentOutputs utxos, mustSpendPubKeyOutput $ head refs) else Nothing
     }
     where
         utxos = Data.Map.map fst lookups
-        refs  = Data.Map.keys $ Data.Map.filter (f . toTxOut) utxos
+        refs  = Data.Map.keys $ Data.Map.filterWithKey (\ref -> f ref . toTxOut) utxos
         cond  = not $ null refs
 
-utxoSpentScriptTx :: ToData r => (TxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> r)
+utxoSpentScriptTx :: ToData r => (TxOutRef -> TxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> r)
     -> TxConstructor a i o -> TxConstructor a i o
 utxoSpentScriptTx f scriptVal red constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
         if cond
@@ -166,7 +166,7 @@ utxoSpentScriptTx f scriptVal red constr@(TxConstructor _ lookups res) = constr 
     }
     where
         utxos  = Data.Map.map fst lookups
-        utxos' = Data.Map.toList $ Data.Map.filter (f . toTxOut) utxos
+        utxos' = Data.Map.toList $ Data.Map.filterWithKey (\ref -> f ref . toTxOut) utxos
         cond  = not $ null utxos'
 
 utxoReferencedTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
