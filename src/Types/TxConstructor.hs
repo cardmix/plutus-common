@@ -24,10 +24,11 @@ import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$
 import           Prelude                          (Show, Monoid (mempty))
 
 data TxConstructor a i o = TxConstructor {
+    txCurrentTime        :: POSIXTime,
     txConstructorLookups :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
     txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
 }
     deriving (Show, Generic, FromJSON, ToJSON)
 
-newTx :: TypedValidator a -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->  TxConstructor a i o
-newTx scriptVal lookups = TxConstructor lookups $ Just (typedValidatorLookups scriptVal, mempty)
+newTx :: TypedValidator a -> POSIXTime -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->  TxConstructor a i o
+newTx scriptVal ct lookups = TxConstructor ct lookups $ Just (typedValidatorLookups scriptVal, mempty)

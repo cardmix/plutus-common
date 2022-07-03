@@ -20,11 +20,11 @@ import           Ledger.Constraints.OffChain      (unspentOutputs, mintingPolicy
 import           Ledger.Value                     (getValue)
 import           Plutus.V1.Ledger.Api             (FromData(..))
 import           PlutusTx.AssocMap                (Map, lookup, toList)
+import           PlutusTx.IsData                  (ToData(..))
 import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mempty)
 import           Prelude                          ((<>), mempty)
 
 import           Types.TxConstructor
-import PlutusTx.IsData (ToData(..))
 
 ----------------------------- On-Chain -------------------------------
 
@@ -148,8 +148,9 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 -------------------------- Off-Chain -----------------------------
 
 utxoSpentPublicKeyTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
-utxoSpentPublicKeyTx f (TxConstructor lookups res) = TxConstructor lookups $
-        if cond then res <> Just (unspentOutputs utxos, mustSpendPubKeyOutput $ head refs) else Nothing
+utxoSpentPublicKeyTx f constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
+        if cond then Just (unspentOutputs utxos, mustSpendPubKeyOutput $ head refs) else Nothing
+    }
     where
         utxos = Data.Map.map fst lookups
         refs  = Data.Map.keys $ Data.Map.filter (f . toTxOut) utxos
@@ -157,11 +158,12 @@ utxoSpentPublicKeyTx f (TxConstructor lookups res) = TxConstructor lookups $
 
 utxoSpentScriptTx :: ToData r => (TxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> r)
     -> TxConstructor a i o -> TxConstructor a i o
-utxoSpentScriptTx f scriptVal red (TxConstructor lookups res) = TxConstructor lookups $
+utxoSpentScriptTx f scriptVal red constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
         if cond
-            then res <> Just (unspentOutputs utxos <> otherScript (scriptVal $ head utxos'), 
+            then Just (unspentOutputs utxos <> otherScript (scriptVal $ head utxos'), 
                 mustSpendScriptOutput (fst $ head utxos') (Redeemer $ toBuiltinData $ red $ head utxos'))
             else Nothing
+    }
     where
         utxos  = Data.Map.map fst lookups
         utxos' = Data.Map.toList $ Data.Map.filter (f . toTxOut) utxos
@@ -171,28 +173,37 @@ utxoReferencedTx :: (TxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i 
 utxoReferencedTx _ = id
 
 utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> TxConstructor a i o -> TxConstructor a i o
-utxoProducedPublicKeyTx pkh skh val dat (TxConstructor lookups res) = TxConstructor lookups $
+utxoProducedPublicKeyTx pkh skh val dat constr@(TxConstructor _ _ res) = constr { txConstructorResult = res <>
         if isJust skh
-            then res <> Just (mempty, mustPayWithDatumToPubKeyAddress pkh (fromJust skh) (Datum $ toBuiltinData dat) val)
-            else res <> Just (mempty, mustPayWithDatumToPubKey pkh (Datum $ toBuiltinData dat) val)
+            then Just (mempty, mustPayWithDatumToPubKeyAddress pkh (fromJust skh) (Datum $ toBuiltinData dat) val)
+            else Just (mempty, mustPayWithDatumToPubKey pkh (Datum $ toBuiltinData dat) val)
+    }
 
 utxoProducedScriptTx :: ToData d => ValidatorHash -> Maybe StakeValidatorHash -> Value -> d -> TxConstructor a i o -> TxConstructor a i o
-utxoProducedScriptTx vh svh val dat (TxConstructor lookups res) = TxConstructor lookups $
+utxoProducedScriptTx vh svh val dat constr@(TxConstructor _ _ res) = constr { txConstructorResult = res <>
         if isJust svh
-            then res <> Just (mempty, mustPayToOtherScriptAddress vh (fromJust svh) (Datum $ toBuiltinData dat) val)
-            else res <> Just (mempty, mustPayToOtherScript vh (Datum $ toBuiltinData dat) val)
+            then Just (mempty, mustPayToOtherScriptAddress vh (fromJust svh) (Datum $ toBuiltinData dat) val)
+            else Just (mempty, mustPayToOtherScript vh (Datum $ toBuiltinData dat) val)
+    }
 
 tokensMintedTx :: ToData r => MintingPolicy -> r -> Value -> TxConstructor a i o -> TxConstructor a i o
-tokensMintedTx mp red v (TxConstructor lookups res) = TxConstructor lookups $
-        res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v)
+tokensMintedTx mp red v constr@(TxConstructor _ _ res) = constr { txConstructorResult = res <>
+        Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v)
+    }
 
 tokensBurnedTx :: ToData r => MintingPolicy -> r -> Value -> TxConstructor a i o -> TxConstructor a i o
-tokensBurnedTx mp red v (TxConstructor lookups res) = TxConstructor lookups $
-        res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) (negate v))
+tokensBurnedTx mp red v constr@(TxConstructor _ _ res) = constr { txConstructorResult = res <>
+        Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) (negate v))
+    }
 
 validatedInIntervalTx :: POSIXTime -> POSIXTime -> TxConstructor a i o -> TxConstructor a i o
-validatedInIntervalTx startTime endTime (TxConstructor lookups res) = TxConstructor lookups $
-        res <> Just (mempty, mustValidateIn $ interval startTime endTime)
+validatedInIntervalTx startTime endTime constr@(TxConstructor ct _ res) = constr { txConstructorResult = res <>
+        if cond
+            then Just (mempty, mustValidateIn $ interval startTime endTime)
+            else Nothing
+    }
+    where
+        cond = startTime <= ct &&  ct <= endTime
 
 validatedAroundTx :: POSIXTime -> TxConstructor a i o -> TxConstructor a i o
 validatedAroundTx time = validatedInIntervalTx time (time + timeToValidate)
