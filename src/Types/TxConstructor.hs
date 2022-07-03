@@ -25,10 +25,12 @@ import           Prelude                          (Show, Monoid (mempty))
 
 data TxConstructor a i o = TxConstructor {
     txCurrentTime        :: POSIXTime,
+    txCreator            :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
     txConstructorLookups :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
     txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
 }
     deriving (Show, Generic, FromJSON, ToJSON)
 
-newTx :: TypedValidator a -> POSIXTime -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->  TxConstructor a i o
-newTx scriptVal ct lookups = TxConstructor ct lookups $ Just (typedValidatorLookups scriptVal, mempty)
+newTx :: TypedValidator a -> POSIXTime -> (PaymentPubKeyHash, Maybe StakePubKeyHash) -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
+    TxConstructor a i o
+newTx scriptVal ct creator lookups = TxConstructor ct creator lookups $ Just (typedValidatorLookups scriptVal, mempty)
