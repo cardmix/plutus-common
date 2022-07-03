@@ -156,12 +156,12 @@ utxoSpentPublicKeyTx f constr@(TxConstructor _ lookups res) = constr { txConstru
         refs  = Data.Map.keys $ Data.Map.filterWithKey f utxos
         cond  = not $ null refs
 
-utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> ((TxOutRef, ChainIndexTxOut) -> Validator) -> ((TxOutRef, ChainIndexTxOut) -> r)
-    -> TxConstructor a i o -> TxConstructor a i o
+utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
+    (TxOutRef -> ChainIndexTxOut -> r) -> TxConstructor a i o -> TxConstructor a i o
 utxoSpentScriptTx f scriptVal red constr@(TxConstructor _ lookups res) = constr { txConstructorResult = res <>
         if cond
-            then Just (unspentOutputs utxos <> otherScript (scriptVal $ head utxos'),
-                mustSpendScriptOutput (fst $ head utxos') (Redeemer $ toBuiltinData $ red $ head utxos'))
+            then Just (unspentOutputs utxos <> otherScript (uncurry scriptVal $ head utxos'),
+                mustSpendScriptOutput (fst $ head utxos') (Redeemer $ toBuiltinData $ uncurry red $ head utxos'))
             else Nothing
     }
     where
