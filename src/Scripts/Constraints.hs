@@ -11,7 +11,7 @@
 
 module Scripts.Constraints where
 
-import           Control.Monad.State              (State, state)
+import           Control.Monad.State              (State, MonadState (..))
 import           Data.Maybe                       (fromJust)
 import qualified Data.Map
 import           Ledger                           hiding (singleton, unspentOutputs, lookup)
@@ -149,20 +149,28 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 -------------------------- Off-Chain -----------------------------
 
 failTx :: Maybe res -> State (TxConstructor a i o) ()
-failTx r = if isJust r then return () else state $ \constr -> ((), constr { txConstructorResult = Nothing })
+failTx r = if isJust r
+    then return ()
+    else do
+        constr <- get
+        put constr { txConstructorResult = Nothing }
 
 utxoSpentPublicKeyTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor a i o) ()
 utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx
 
 utxoSpentPublicKeyTx' :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
-utxoSpentPublicKeyTx' f = state $ \constr@(TxConstructor _ _ lookups res) -> 
-    let utxos  = Data.Map.filterWithKey f $ Data.Map.map fst lookups
-    in if Data.Map.null utxos
-        then (Nothing, constr)
-        else
+utxoSpentPublicKeyTx' f = do
+    constr <- get
+    let lookups = txConstructorLookups constr
+        res     = txConstructorResult constr
+        utxos   = Data.Map.filterWithKey f $ Data.Map.map fst lookups
+    if Data.Map.null utxos
+        then return Nothing
+        else do
             let utxo = head $ Data.Map.toList utxos
                 ref  = fst utxo
-            in (Just utxo, constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustSpendPubKeyOutput ref) })
+            put constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustSpendPubKeyOutput ref) }
+            return $ Just utxo
 
 utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
     (TxOutRef -> ChainIndexTxOut -> r) -> State (TxConstructor a i o) ()
@@ -170,47 +178,62 @@ utxoSpentScriptTx f scriptVal red = utxoSpentScriptTx' f scriptVal red >>= failT
 
 utxoSpentScriptTx' :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
     (TxOutRef -> ChainIndexTxOut -> r) -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
-utxoSpentScriptTx' f scriptVal red = state $ \constr@(TxConstructor _ _ lookups res) ->
-    let utxos  = Data.Map.filterWithKey f $ Data.Map.map fst lookups
-    in if Data.Map.null utxos
-        then (Nothing, constr)
-        else
+utxoSpentScriptTx' f scriptVal red = do
+    constr <- get
+    let lookups = txConstructorLookups constr
+        res     = txConstructorResult constr
+        utxos   = Data.Map.filterWithKey f $ Data.Map.map fst lookups
+    if Data.Map.null utxos
+        then return Nothing
+        else do
             let utxo = head $ Data.Map.toList utxos
                 ref  = fst utxo
-            in (Just utxo, constr { txConstructorResult = res <> Just (unspentOutputs utxos <> otherScript (uncurry scriptVal utxo),
-                mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)) })
+            put constr { txConstructorResult = res <> Just (unspentOutputs utxos <> otherScript (uncurry scriptVal utxo),
+                mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)) }
+            return $ Just utxo
 
 utxoReferencedTx :: Bool -> (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
 utxoReferencedTx _ _ = undefined
 
 utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> State (TxConstructor a i o) ()
-utxoProducedPublicKeyTx pkh skh val dat = state $ \constr@(TxConstructor _ _ _ res) ->
-    let c = if isJust skh
+utxoProducedPublicKeyTx pkh skh val dat = do
+    constr <- get
+    let res = txConstructorResult constr
+        c   = if isJust skh
             then mustPayWithDatumToPubKeyAddress pkh (fromJust skh) (Datum $ toBuiltinData dat) val
             else mustPayWithDatumToPubKey pkh (Datum $ toBuiltinData dat) val
-    in ((), constr { txConstructorResult = res <> Just (mempty, c) })
+    put constr { txConstructorResult = res <> Just (mempty, c) }
 
 utxoProducedScriptTx :: ToData d => ValidatorHash -> Maybe StakeValidatorHash -> Value -> d -> State (TxConstructor a i o) ()
-utxoProducedScriptTx vh svh val dat = state $ \constr@(TxConstructor _ _ _ res) ->
-    let c = if isJust svh
+utxoProducedScriptTx vh svh val dat = do
+    constr <- get
+    let res = txConstructorResult constr
+        c   = if isJust svh
             then mustPayToOtherScriptAddress vh (fromJust svh) (Datum $ toBuiltinData dat) val
             else mustPayToOtherScript vh (Datum $ toBuiltinData dat) val
-    in ((), constr { txConstructorResult = res <> Just (mempty, c) })
+    put constr { txConstructorResult = res <> Just (mempty, c) }
 
 tokensMintedTx :: ToData r => MintingPolicy -> r -> Value -> State (TxConstructor a i o) ()
-tokensMintedTx mp red v = state $ \constr@(TxConstructor _ _ _ res) ->
-    ((), constr { txConstructorResult = res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v) })
+tokensMintedTx mp red v = do
+    constr <- get
+    let res = txConstructorResult constr
+    put constr { txConstructorResult = res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v) }
 
 tokensBurnedTx :: ToData r => MintingPolicy -> r -> Value -> State (TxConstructor a i o) ()
-tokensBurnedTx mp red v = state $ \constr@(TxConstructor _ _ _ res) -> 
-    ((), constr { txConstructorResult = res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) (negate v)) })
+tokensBurnedTx mp red v = do
+    constr <- get
+    let res = txConstructorResult constr
+    put constr { txConstructorResult = res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) (negate v)) }
 
 validatedInIntervalTx :: POSIXTime -> POSIXTime -> State (TxConstructor a i o) ()
-validatedInIntervalTx startTime endTime = state $ \constr@(TxConstructor ct _ _ res) ->
-    let cond = startTime <= ct &&  ct <= endTime
-    in if cond
-        then ((), constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) })
-        else ((), constr { txConstructorResult = Nothing })        
+validatedInIntervalTx startTime endTime = do
+    constr <- get
+    let ct   = txCurrentTime constr
+        res  = txConstructorResult constr
+        cond = startTime <= ct &&  ct <= endTime
+    if cond
+        then put constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) }
+        else put constr { txConstructorResult = Nothing }
 
 validatedAroundTx :: POSIXTime -> State (TxConstructor a i o) ()
 validatedAroundTx time = validatedInIntervalTx time (time + timeToValidate)
