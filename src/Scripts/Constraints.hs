@@ -148,14 +148,15 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 
 -------------------------- Off-Chain -----------------------------
 
-failTx :: Maybe res -> State (TxConstructor a i o) ()
+failTx :: Maybe res -> State (TxConstructor a i o) (Maybe res)
 failTx r = if isJust r
-    then return ()
+    then return r
     else do
         constr <- get
         put constr { txConstructorResult = Nothing }
+        return r
 
-utxoSpentPublicKeyTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor a i o) ()
+utxoSpentPublicKeyTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
 utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx
 
 utxoSpentPublicKeyTx' :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
@@ -173,7 +174,7 @@ utxoSpentPublicKeyTx' f = do
             return $ Just utxo
 
 utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
-    (TxOutRef -> ChainIndexTxOut -> r) -> State (TxConstructor a i o) ()
+    (TxOutRef -> ChainIndexTxOut -> r) -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
 utxoSpentScriptTx f scriptVal red = utxoSpentScriptTx' f scriptVal red >>= failTx
 
 utxoSpentScriptTx' :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
