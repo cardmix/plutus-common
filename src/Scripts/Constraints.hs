@@ -192,8 +192,8 @@ utxoSpentScriptTx' f scriptVal red = do
                 mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)) }
             return $ Just utxo
 
-utxoReferencedTx :: Bool -> (TxOutRef -> ChainIndexTxOut -> Bool) -> TxConstructor a i o -> TxConstructor a i o
-utxoReferencedTx _ _ = undefined
+utxoReferencedTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor a i o) ()
+utxoReferencedTx _ = undefined
 
 utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> State (TxConstructor a i o) ()
 utxoProducedPublicKeyTx pkh skh val dat = do
