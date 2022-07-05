@@ -23,14 +23,15 @@ import           Plutus.ChainIndex                (ChainIndexTx)
 import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, find, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
 
-data TxConstructor a i o = TxConstructor {
+data TxConstructor d a i o = TxConstructor {
     txCurrentTime        :: POSIXTime,
     txCreator            :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
+    txInputData          :: d,
     txConstructorLookups :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
     txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
 }
     deriving (Show, Generic, FromJSON, ToJSON)
 
-newTx :: TypedValidator a -> POSIXTime -> (PaymentPubKeyHash, Maybe StakePubKeyHash) -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
-    TxConstructor a i o
-newTx scriptVal ct creator lookups = TxConstructor ct creator lookups $ Just (typedValidatorLookups scriptVal, mempty)
+newTx :: TypedValidator a -> (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> d -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
+    TxConstructor d a i o
+newTx scriptVal creator ct dat lookups = TxConstructor ct creator dat lookups $ Just (typedValidatorLookups scriptVal, mempty)
