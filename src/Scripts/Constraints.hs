@@ -173,12 +173,12 @@ utxoSpentPublicKeyTx' f = do
             put constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustSpendPubKeyOutput ref) }
             return $ Just utxo
 
-utxoSpentScriptTx :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
-    (TxOutRef -> ChainIndexTxOut -> r) -> State (TxConstructor d a i o) (Maybe (TxOutRef, ChainIndexTxOut))
+utxoSpentScriptTx :: ToData redeemer => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
+    (TxOutRef -> ChainIndexTxOut -> redeemer) -> State (TxConstructor d a i o) (Maybe (TxOutRef, ChainIndexTxOut))
 utxoSpentScriptTx f scriptVal red = utxoSpentScriptTx' f scriptVal red >>= failTx
 
-utxoSpentScriptTx' :: ToData r => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
-    (TxOutRef -> ChainIndexTxOut -> r) -> State (TxConstructor d a i o) (Maybe (TxOutRef, ChainIndexTxOut))
+utxoSpentScriptTx' :: ToData redeemer => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
+    (TxOutRef -> ChainIndexTxOut -> redeemer) -> State (TxConstructor d a i o) (Maybe (TxOutRef, ChainIndexTxOut))
 utxoSpentScriptTx' f scriptVal red = do
     constr <- get
     let lookups = txConstructorLookups constr
@@ -196,7 +196,7 @@ utxoSpentScriptTx' f scriptVal red = do
 utxoReferencedTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor d a i o) ()
 utxoReferencedTx _ = undefined
 
-utxoProducedPublicKeyTx :: ToData d => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> d -> State (TxConstructor d a i o) ()
+utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> datum -> State (TxConstructor d a i o) ()
 utxoProducedPublicKeyTx pkh skh val dat = do
     constr <- get
     let res = txConstructorResult constr
@@ -205,7 +205,7 @@ utxoProducedPublicKeyTx pkh skh val dat = do
             else mustPayWithDatumToPubKey pkh (Datum $ toBuiltinData dat) val
     put constr { txConstructorResult = res <> Just (mempty, c) }
 
-utxoProducedScriptTx :: ToData d => ValidatorHash -> Maybe StakeValidatorHash -> Value -> d -> State (TxConstructor d a i o) ()
+utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakeValidatorHash -> Value -> datum -> State (TxConstructor d a i o) ()
 utxoProducedScriptTx vh svh val dat = do
     constr <- get
     let res = txConstructorResult constr
@@ -214,13 +214,13 @@ utxoProducedScriptTx vh svh val dat = do
             else mustPayToOtherScript vh (Datum $ toBuiltinData dat) val
     put constr { txConstructorResult = res <> Just (mempty, c) }
 
-tokensMintedTx :: ToData r => MintingPolicy -> r -> Value -> State (TxConstructor d a i o) ()
+tokensMintedTx :: ToData redeemer => MintingPolicy -> redeemer -> Value -> State (TxConstructor d a i o) ()
 tokensMintedTx mp red v = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <> Just (mintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v) }
 
-tokensBurnedTx :: ToData r => MintingPolicy -> r -> Value -> State (TxConstructor d a i o) ()
+tokensBurnedTx :: ToData redeemer => MintingPolicy -> redeemer -> Value -> State (TxConstructor d a i o) ()
 tokensBurnedTx mp red v = do
     constr <- get
     let res = txConstructorResult constr
