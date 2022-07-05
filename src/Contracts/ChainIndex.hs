@@ -19,7 +19,7 @@ import           Cardano.Api                       (FromJSON, ToJSON)
 import           Control.Monad.Extra               (mconcatMapM)
 import           Data.Map                          (Map, union)
 import           GHC.Generics                      (Generic)
-import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef, POSIXTime, AssetClass)
+import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef, POSIXTime, CurrencySymbol)
 import           Plutus.ChainIndex                 (ChainIndexTx)
 import           PlutusTx.Prelude                  hiding ((<>), (<$>))
 import           Prelude                           (Show, undefined, IO, (<$>))
@@ -27,7 +27,7 @@ import           Prelude                           (Show, undefined, IO, (<$>))
 
 data ChainIndexCache = ChainIndexCache {
     cacheAddresses  :: [Address],
-    cacheCurrencies :: [AssetClass],
+    cacheCurrencies :: [CurrencySymbol],
     cacheData       :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
     cacheTime       :: POSIXTime
 }
@@ -58,5 +58,5 @@ getUtxosAt :: Address -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
 getUtxosAt _ = undefined
 
 -- Get all utxos containing a given currency
-getUtxosWithCurrency :: AssetClass -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+getUtxosWithCurrency :: CurrencySymbol -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
 getUtxosWithCurrency _ = undefined
