@@ -17,8 +17,7 @@ import           Data.Map                         (Map)
 import           GHC.Generics                     (Generic)
 import           Ledger                           hiding (singleton, unspentOutputs)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
-import           Ledger.Constraints.OffChain      (ScriptLookups, typedValidatorLookups)
-import           Ledger.Typed.Scripts             (TypedValidator)
+import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Plutus.ChainIndex                (ChainIndexTx)
 import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, find, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
@@ -32,6 +31,6 @@ data TxConstructor d a i o = TxConstructor {
 }
     deriving (Show, Generic, FromJSON, ToJSON)
 
-newTx :: TypedValidator a -> (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> d -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
+mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> d -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
     TxConstructor d a i o
-newTx scriptVal creator ct dat lookups = TxConstructor ct creator dat lookups $ Just (typedValidatorLookups scriptVal, mempty)
+mkTxConstructor creator ct dat lookups = TxConstructor ct creator dat lookups $ Just (mempty, mempty)
