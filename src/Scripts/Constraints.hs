@@ -151,6 +151,8 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
 leftmost :: [State (TxConstructor d a i o) res] -> State (TxConstructor d a i o) ()
 leftmost []    = return ()
 leftmost (s:ss) = do
+    constr <- get
+    put constr { txConstructorResult = Just (mempty, mempty) }
     _ <- s
     r <- gets txConstructorResult
     if isNothing r
