@@ -11,7 +11,7 @@
 
 module Scripts.Constraints where
 
-import           Control.Monad.State              (State, MonadState (..), gets)
+import           Control.Monad.State              (State, MonadState (..))
 import           Data.Maybe                       (fromJust)
 import qualified Data.Map
 import           Ledger                           hiding (singleton, unspentOutputs, lookup)
@@ -147,17 +147,6 @@ getLowerTimeEstimate info = case ivFrom (txInfoValidRange info) of
                                 _                       -> error ()
 
 -------------------------- Off-Chain -----------------------------
-
-leftmost :: [State (TxConstructor d a i o) res] -> State (TxConstructor d a i o) ()
-leftmost []    = return ()
-leftmost (s:ss) = do
-    constr <- get
-    put constr { txConstructorResult = Just (mempty, mempty) }
-    _ <- s
-    r <- gets txConstructorResult
-    if isNothing r
-        then leftmost ss
-        else return ()
 
 failTx :: Maybe res -> State (TxConstructor d a i o) (Maybe res)
 failTx r = if isJust r

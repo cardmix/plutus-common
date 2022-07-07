@@ -19,7 +19,7 @@ import           Ledger                           hiding (singleton, unspentOutp
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Plutus.ChainIndex                (ChainIndexTx)
-import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, find, toList, fromInteger)
+import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
 
 data TxConstructor d a i o = TxConstructor {
@@ -34,3 +34,6 @@ data TxConstructor d a i o = TxConstructor {
 mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> d -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
     TxConstructor d a i o
 mkTxConstructor creator ct dat lookups = TxConstructor ct creator dat lookups $ Just (mempty, mempty)
+
+selectTxConstructor :: [TxConstructor d a i o] -> Maybe (TxConstructor d a i o)
+selectTxConstructor = find (isJust . txConstructorResult)
