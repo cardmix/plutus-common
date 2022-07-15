@@ -13,7 +13,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 
 
-module Contracts.ChainIndex where
+module IO.ChainIndex where
 
 import           Cardano.Api                       (FromJSON, ToJSON)
 import           Control.Monad.Extra               (mconcatMapM)
@@ -23,6 +23,8 @@ import           Ledger                            (Address, ChainIndexTxOut(..)
 import           Plutus.ChainIndex                 (ChainIndexTx)
 import           PlutusTx.Prelude                  hiding ((<>), (<$>))
 import           Prelude                           (Show, undefined, IO, (<$>))
+
+import           IO.Time                           (currentTime)
 
 
 data ChainIndexCache = ChainIndexCache {
@@ -44,9 +46,6 @@ updateChainIndexCache oldCache@(ChainIndexCache addrs _ cTime) = do
         else do
             utxos  <- mconcatMapM getUtxosAt addrs
             ChainIndexCache addrs utxos <$> currentTime
-
-currentTime :: IO POSIXTime
-currentTime = undefined
 
 ----------------------------------- Chain index queries ---------------------------------
 
