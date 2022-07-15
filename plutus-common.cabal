@@ -37,9 +37,7 @@ library
       Scripts.Constraints
       Types.TxConstructor
       Utils.Address
-      Utils.BalanceTx
       Utils.ByteString
-      Utils.Network
       Utils.Tx
       Utils.Prelude
     build-depends:

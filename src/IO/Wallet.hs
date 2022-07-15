@@ -19,9 +19,10 @@ import           Prelude                           (IO, undefined)
 balanceTx :: (ScriptLookups a, TxConstraints i o) -> IO CardanoTx
 balanceTx = undefined
 
--- Send a balanced transaction to Cardano Wallet Backend
+-- Send a balanced transaction to Cardano Wallet Backend and return immediately
 submitTx :: CardanoTx -> IO ()
 submitTx = undefined
 
+-- Send a balanced transaction to Cardano Wallet Backend and wait until transaction is confirmed or declined
 submitTxConfirmed :: CardanoTx -> IO ()
 submitTxConfirmed = undefined

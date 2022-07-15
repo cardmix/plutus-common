@@ -55,6 +55,8 @@ zipWith0 f [] (b:bs)     = f zero b : zipWith0 f [] bs
 zipWith0 f (a:as) []     = f a zero : zipWith0 f as []
 zipWith0 f (a:as) (b:bs) = f a b    : zipWith0 f as bs
 
+--------------------------------- Batches ------------------------------------
+
 {-# INLINABLE selectBatch #-}
 selectBatch :: Integer -> Integer -> Integer -> Integer -> (Integer, Integer)
 selectBatch sz n1 n2 i = (n1 + sz*i, min (n1 + sz*(i+1) - 1) n2)
