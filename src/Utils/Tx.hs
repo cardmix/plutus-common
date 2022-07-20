@@ -31,3 +31,7 @@ textToCardanoTx txt = do
     bs <- either (const Nothing) Just $ tryDecode txt
     tx <- either (const Nothing) Just $ deserialiseFromCBOR AsAlonzoTx bs
     return $ CardanoApiTx $ SomeTx tx AlonzoEraInCardanoMode
+
+cardanoTxToText :: CardanoTx -> Maybe Text
+cardanoTxToText (CardanoApiTx (SomeTx tx AlonzoEraInCardanoMode)) = Just $ encodeByteString $ serialiseToCBOR tx
+cardanoTxToText _ = Nothing
