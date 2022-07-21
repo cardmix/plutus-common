@@ -11,10 +11,10 @@
 
 module Utils.Tx where
 
-import           Cardano.Api.Shelley     (ProtocolParameters, NetworkId(..), EraInMode (..), AsType (..), SerialiseAsCBOR (..))
+import           Cardano.Api.Shelley     (EraInMode (..), AsType (..), SerialiseAsCBOR (..))
 import           Data.Aeson.Extras       (encodeByteString, tryDecode)
-import           Data.Default            (def)
 import           Data.Text               (Text)
+import           Ledger                  (Params)
 import           Ledger.Constraints      (UnbalancedTx)
 import           Ledger.Tx               (CardanoTx (..), SomeCardanoApiTx (..))
 import           Plutus.Contract.Wallet  (ExportTx (..), export)
@@ -22,9 +22,9 @@ import           PlutusTx.Prelude        hiding ((<>))
 
 ------------------------ Export/Import of transactions -------------------------
 
-unbalancedTxToCBOR :: NetworkId -> ProtocolParameters -> UnbalancedTx -> Maybe Text
-unbalancedTxToCBOR networkID pparams = fmap (encodeByteString . serialiseToCBOR . partialTx) .
-    either (const Nothing) Just . export pparams networkID def
+unbalancedTxToCBOR :: Params -> UnbalancedTx -> Maybe Text
+unbalancedTxToCBOR params = fmap (encodeByteString . serialiseToCBOR . partialTx) .
+    either (const Nothing) Just . export params
 
 textToCardanoTx :: Text -> Maybe CardanoTx
 textToCardanoTx txt = do
