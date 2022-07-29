@@ -11,21 +11,27 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TupleSections              #-}
 
 
 module IO.ChainIndex where
 
 import           Cardano.Api                       (FromJSON, ToJSON)
+import           Control.Applicative               (Applicative(..))
 import           Control.Monad.Extra               (mconcatMapM)
+import           Data.Default                      (Default (def))
 import           Data.Map                          (Map)
+import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
-import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef, POSIXTime)
-import           Plutus.ChainIndex                 (ChainIndexTx)
-import           PlutusTx.Prelude                  hiding ((<>), (<$>))
-import           Prelude                           (Show, undefined, IO, (<$>))
-
+import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef (txOutRefId), POSIXTime)
+import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
+import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
+import qualified Plutus.ChainIndex.Client          as Client
+import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap)
+import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
+import           Prelude                           (Show, IO, (<$>), (<>), traverse, fmap)
 import           IO.Time                           (currentTime)
-
+import           Utils.Servant
 
 data ChainIndexCache = ChainIndexCache {
     cacheAddresses  :: [Address],
@@ -51,4 +57,38 @@ updateChainIndexCache oldCache@(ChainIndexCache addrs _ cTime) = do
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-getUtxosAt _ = undefined
+getUtxosAt addr = do
+  refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
+  ciTxs <- getFromEndpoint $ Client.getTxs $ map (txOutRefId . fst) refTxOuts
+  pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
+  where
+    f acc page' = do
+      let utxoRefs = pageItems page'
+      txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+      let utxos = Map.fromList
+                $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
+                $ zip utxoRefs txOuts
+      pure $ acc <> utxos
+
+-- Fold through each 'Page's of unspent 'TxOutRef's at a given 'Address', and
+-- accumulate the result.
+foldUtxoRefsAt :: forall a.
+    (a -> Page TxOutRef -> IO a) -- ^ Accumulator function
+    -> a -- ^ Initial value
+    -> Address -- ^ Address which contain the UTXOs
+    -> IO a
+foldUtxoRefsAt f ini addr = go ini (Just def)
+    where
+        go acc Nothing = pure acc
+        go acc (Just pq) = do
+            page' <- page <$> utxoRefsAt pq addr
+            newAcc <- f acc page'
+            go newAcc (nextPageQuery page')
+
+unspentTxOutFromRef :: TxOutRef -> IO ChainIndexTxOut
+unspentTxOutFromRef = getFromEndpoint . Client.getUnspentTxOut
+
+-- Get the unspent transaction output references at an address.
+utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse
+utxoRefsAt pageQ = 
+    getFromEndpoint . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential
