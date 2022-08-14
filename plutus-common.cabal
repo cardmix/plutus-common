@@ -2,8 +2,6 @@ cabal-version:      3.0
 
 name:               plutus-common
 version:            0.1.0.0
-license:            Apache-2.0
-license-files:      LICENSE
 
 author:             Vladimir Sinyakov
 maintainer:         devteam@cardmix.io

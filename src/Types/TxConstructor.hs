@@ -15,12 +15,15 @@ module Types.TxConstructor where
 import           Cardano.Api                      (FromJSON, ToJSON)
 import           Data.Map                         (Map)
 import           GHC.Generics                     (Generic)
-import           Ledger                           hiding (singleton, unspentOutputs)
+import           Ledger                           (ChainIndexTxOut)
+import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Plutus.ChainIndex                (ChainIndexTx)
+import           Plutus.V2.Ledger.Api             (POSIXTime, TxOutRef)
 import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
+
 
 data TxConstructor d a i o = TxConstructor {
     txCurrentTime        :: POSIXTime,
