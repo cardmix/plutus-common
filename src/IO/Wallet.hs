@@ -13,44 +13,57 @@
 
 module IO.Wallet where
 
-import           Cardano.Api                       (Tx(Tx), toEraInMode, ConsensusMode(..), InAnyCardanoEra(..)) 
-import qualified Cardano.Wallet.Api.Client         as Client
-import           Cardano.Wallet.Api.Types          (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..))
-import           Cardano.Wallet.Api.Types.SchemaMetadata (TxMetadataSchema(..))
-import           Cardano.Wallet.Primitive.Types    (WalletId)
-import           Cardano.Wallet.Primitive.Types.Tx (sealedTxFromCardano', SealedTx(..), getSealedTxBody)
-import           Control.Concurrent                (threadDelay)
-import           Control.Lens                      ((^?))
-import           Control.Monad                     (void, unless)
-import           Data.Aeson                        (ToJSON(toJSON)) 
-import           Data.Aeson.Lens                   (key, AsPrimitive(_String))
-import           Data.Either                       (fromRight)
-import           Data.Map                          (keys)
-import           Data.Text                         (pack)
-import           Data.Text.Class                   (FromText(fromText))
-import           Data.Void                         (Void)
-import           Ledger                            (CardanoTx (..), Params, PaymentPubKeyHash, StakePubKeyHash, TxOutRef)
-import           Ledger.Ada                        (lovelaceValueOf)
-import           Ledger.Constraints                (TxConstraints, ScriptLookups, mkTx, mustPayToPubKeyAddress)
-import           Ledger.Typed.Scripts              (ValidatorTypes(..))
-import           Ledger.Tx                         (getCardanoTxId)   
-import           Ledger.Tx.CardanoAPI              (unspentOutputsTx, SomeCardanoApiTx(..))
-import           Plutus.Contract.Wallet            (export)
-import           PlutusTx.IsData                   (ToData, FromData)
-import           PlutusTx.Prelude                  hiding (mempty, pure, (<$>), unless)
-import           Prelude                           (IO, mempty, (<$>), Show (show))
-import           Utils.Prelude                     (replicate)
-import           Utils.Servant                     (getFromEndpoint) 
+import           Cardano.Api                               (Tx(Tx), toEraInMode, ConsensusMode(..), InAnyCardanoEra(..)) 
+import qualified Cardano.Wallet.Api.Client                 as Client
+import           Cardano.Wallet.Api.Types                  (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..), ApiSignTransactionPostData(ApiSignTransactionPostData))
+import           Cardano.Wallet.Api.Types.SchemaMetadata   (TxMetadataSchema(..))
+import           Cardano.Wallet.Primitive.Types            (WalletId(..))
+import           Cardano.Wallet.Primitive.Passphrase.Types (Passphrase)
+import           Cardano.Wallet.Primitive.Types.Tx         (sealedTxFromCardano', SealedTx(..), getSealedTxBody)
+import           Control.Concurrent                        (threadDelay)
+import           Control.Lens                              ((^?))
+import           Control.Monad                             (void, unless)
+import           Data.Aeson                                (ToJSON(toJSON)) 
+import           Data.Aeson.Lens                           (key, AsPrimitive(_String))
+import           Data.Either                               (fromRight)
+import           Data.Map                                  (keys)
+import           Data.Text                                 (pack)
+import           Data.Text.Class                           (FromText(fromText))
+import           Data.Void                                 (Void)
+import           Ledger                                    (CardanoTx (..), Params, PaymentPubKeyHash, StakePubKeyHash, TxOutRef)
+import           Ledger.Ada                                (lovelaceValueOf)
+import           Ledger.Constraints                        (TxConstraints, ScriptLookups, mkTx, mustPayToPubKeyAddress)
+import           Ledger.Typed.Scripts                      (ValidatorTypes(..))
+import           Ledger.Tx                                 (getCardanoTxId)   
+import           Ledger.Tx.CardanoAPI                      (unspentOutputsTx, SomeCardanoApiTx(..))
+import           Plutus.Contract.Wallet                    (export)
+import           PlutusTx.IsData                           (ToData, FromData)
+import           PlutusTx.Prelude                          hiding (mempty, pure, (<$>), unless)
+import           Prelude                                   (IO, mempty, (<$>), Show (..), print)
+import           Utils.Prelude                             (replicate)
+import qualified Utils.Servant                             as Servant
+
+getFromEndpoint :: Servant.Endpoint a
+getFromEndpoint = Servant.getFromEndpointOnPort 8090
 
 walletIdHardcoded :: WalletId
-walletIdHardcoded = error ()
+walletIdHardcoded = fromRight (error ()) $ fromText "6f0638a327b5520e71861fa973722fe7426db058"
+
+passphraseHardcoded :: Passphrase "lenient"
+passphraseHardcoded = fromRight (error ()) $ fromText "1234567890"
 
 -- getWalletFromId :: WalletId -> IO ApiWallet
 -- getWalletFromId wid = getFromEndpoint $ Client.getWallet Client.walletClient $ ApiT wid
 
+signTx :: CardanoTx -> IO ApiSerialisedTransaction
+signTx tx = getFromEndpoint $ Client.signTransaction Client.transactionClient 
+    (ApiT walletIdHardcoded) 
+    (ApiSignTransactionPostData (ApiT $ cardanoTxToSealedTx tx) (ApiT passphraseHardcoded))
+
 balanceTx :: (FromData (DatumType a), ToData (DatumType a), ToData (RedeemerType a)) => 
     Params -> ScriptLookups a -> TxConstraints (RedeemerType a) (DatumType a) -> IO CardanoTx
 balanceTx params lookups cons = apiSerializedTxToCardanoTx <$> do
+    print $ toJSON etx
     getFromEndpoint $ Client.balanceTransaction Client.transactionClient 
         (ApiT walletIdHardcoded) 
         (toJSON etx)
@@ -101,9 +114,15 @@ apiSerializedTxToCardanoTx = CardanoApiTx . toSomeTx . getSealedTxBody . getApiT
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
 getWalletTxOutRefs :: Params -> PaymentPubKeyHash -> StakePubKeyHash -> Integer -> IO [TxOutRef]
 getWalletTxOutRefs params pkh skh n = do
-        ctx <- balanceTx params lookups cons
-        submitTxConfirmed ctx
-        let refs = case ctx of
+        print "balancing" 
+        balancedTx <- balanceTx params lookups cons
+        print balancedTx
+        print "signing"
+        signedTx <- apiSerializedTxToCardanoTx <$> signTx balancedTx
+        print signedTx
+        print "submiting"
+        submitTxConfirmed signedTx
+        let refs = case signedTx of
                 EmulatorTx _    -> error ()
                 CardanoApiTx tx -> keys $ unspentOutputsTx tx
                 Both _ tx       -> keys $ unspentOutputsTx tx

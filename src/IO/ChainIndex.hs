@@ -29,9 +29,9 @@ import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), Ut
 import qualified Plutus.ChainIndex.Client          as Client
 import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
-import           Prelude                           (Show, IO, (<$>), (<>), traverse, fmap)
+import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap)
 import           IO.Time                           (currentTime)
-import           Utils.Servant
+import qualified Utils.Servant                     as Servant
 
 data ChainIndexCache = ChainIndexCache {
     cacheAddresses  :: [Address],
@@ -39,6 +39,9 @@ data ChainIndexCache = ChainIndexCache {
     cacheTime       :: POSIXTime
 }
     deriving (Show, Generic, FromJSON, ToJSON)
+
+getFromEndpoint :: Servant.Endpoint a
+getFromEndpoint = Servant.getFromEndpointOnPort 9083
 
 -- Cache validity is 30 seconds
 cacheValidityPeriod :: POSIXTime
@@ -59,7 +62,8 @@ updateChainIndexCache oldCache@(ChainIndexCache addrs _ cTime) = do
 getUtxosAt :: Address -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
 getUtxosAt addr = do
   refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
-  ciTxs <- getFromEndpoint $ Client.getTxs $ map (txOutRefId . fst) refTxOuts
+  let txIds = map (txOutRefId . fst) refTxOuts
+  ciTxs <- getFromEndpoint $ Client.getTxs txIds
   pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
   where
     f acc page' = do

@@ -31,12 +31,13 @@ common lang
 library
     import: lang
     exposed-modules:
-      IO.Test
       IO.ChainIndex
       IO.Time
       IO.Wallet
       Scripts.Constraints
       Types.TxConstructor
+      Test.ChainIndex
+      Test.Wallet
       Utils.Address
       Utils.ByteString
       Utils.Tx
