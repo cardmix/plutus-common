@@ -34,10 +34,13 @@ library
       IO.Wallet
       Scripts.Constraints
       Types.TxConstructor
+      Test.ChainIndex
+      Test.Wallet
       Utils.Address
       Utils.ByteString
       Utils.Tx
       Utils.Prelude
+      Utils.Servant
     build-depends:
       base                          >= 4.9 && < 5,
       base16-bytestring                      -any,
@@ -47,6 +50,7 @@ library
       cardano-api                            -any,
       cardano-ledger-alonzo                  -any,
       cardano-ledger-core                    -any,
+      cardano-wallet-core                    -any,
       containers                             -any,
       data-default                           -any,
       directory                              -any,
@@ -55,7 +59,9 @@ library
       freer-extras                           -any,
       freer-simple                           -any,
       flat                                   -any,
+      http-client                            -any,
       lens                                   -any,
+      lens-aeson                             -any,
       mtl                                    -any,
       openapi3                               -any,
       playground-common                      -any,
@@ -73,7 +79,10 @@ library
       random                                 -any,
       req                                    -any,
       serialise                              -any,
+      servant                                -any,
+      servant-client                         -any,
       text                                   -any,
+      text-class                             -any,
       time                                   -any,
       generic-arbitrary                      -any,
       prettyprinter                          -any,
