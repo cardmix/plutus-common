@@ -4,6 +4,7 @@ name:               plutus-common
 version:            0.1.0.0
 
 author:             Vladimir Sinyakov
+                    Grigory Petrov
 maintainer:         devteam@cardmix.io
 
 -- Plutus language settings
@@ -34,13 +35,14 @@ library
       IO.Wallet
       Scripts.Constraints
       Types.TxConstructor
-      Test.ChainIndex
-      Test.Wallet
       Utils.Address
       Utils.ByteString
       Utils.Tx
       Utils.Prelude
       Utils.Servant
+    other-modules:
+      Test.ChainIndex
+      Test.Wallet
     build-depends:
       base                          >= 4.9 && < 5,
       base16-bytestring                      -any,
