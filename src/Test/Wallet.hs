@@ -1,33 +1,35 @@
-{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Test.Wallet where
 
-import Cardano.Api.Shelley hiding (Address)
--- import Cardano.Api.Address
-import Data.Aeson
-import Data.ByteString.Lazy
-import Data.Default
-import Data.FileEmbed
-import Data.Maybe
-import Data.Text
-import IO.Wallet
-import Ledger
-import Utils.Address
+import Cardano.Api.Shelley   (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
+import Data.Aeson            (decode)
+import Data.ByteString.Lazy  (readFile)
+import Data.Default          (Default(..))
+import Data.Maybe            (fromJust)
+import Data.Text             (Text)
+import Ledger                (Params(..), TxOutRef)
+import Prelude               hiding (readFile)
 
-protocolParams :: ProtocolParameters
-protocolParams = fromJust $ decode $ fromStrict $(embedFile "testnet/protocol-parameters.json")
-
-networkId :: NetworkId
-networkId = Testnet $ NetworkMagic 1097911063
-
-ledgerParams :: Params
-ledgerParams = Params def protocolParams networkId
+import IO.Wallet             (getWalletTxOutRefs)
+import Utils.Address         (bech32ToKeyHashes)
 
 daedalusAddress :: Text
 daedalusAddress = "addr_test1qpmv0wkr6z9sdqveecpuywrwcxyueft0wgle85cs9fhsvtgnt9a4spnfrrlpp7puw2lcx2zudf49ewyza4q9ha08qhdq7aezrw"
 
 test :: IO [TxOutRef]
-test = let Just (paymentPKH, Just stakePKH) = bech32ToKeyHashes daedalusAddress
-       in getWalletTxOutRefs ledgerParams paymentPKH stakePKH 1
+test = do
+  pp <- fromJust . decode <$> readFile "testnet/protocol-parameters.json" :: IO ProtocolParameters
+  let (pkh, skh) = fromJust $ bech32ToKeyHashes daedalusAddress
+      networkId = Testnet $ NetworkMagic 1097911063
+      ledgerParams = Params def pp networkId
+  getWalletTxOutRefs ledgerParams pkh (fromJust skh) 1
