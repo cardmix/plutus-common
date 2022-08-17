@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -8,44 +9,54 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE ViewPatterns               #-}
 
+
 module IO.Wallet where
 
-import           Cardano.Api                               (toEraInMode, ConsensusMode(..), InAnyCardanoEra(..), CardanoEra (..), AnyCardanoEra (..))
-import qualified Cardano.Wallet.Api.Client                 as Client
-import           Cardano.Wallet.Api.Types                  (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..), ApiSignTransactionPostData(ApiSignTransactionPostData))
-import           Cardano.Wallet.Api.Types.SchemaMetadata   (TxMetadataSchema(..))
-import           Cardano.Wallet.Primitive.Types            (WalletId(..))
-import           Cardano.Wallet.Primitive.Passphrase.Types (Passphrase)
-import           Cardano.Wallet.Primitive.Types.Tx         (sealedTxFromCardano', SealedTx(..), cardanoTxIdeallyNoLaterThan)
-import           Control.Concurrent                        (threadDelay)
-import           Control.FromSum                           (fromEither)
-import           Control.Lens                              ((^?))
-import           Control.Monad                             (void, unless)
-import           Data.Aeson                                (ToJSON(toJSON))
-import           Data.Aeson.Lens                           (key, AsPrimitive(_String))
-import           Data.Either                               (fromRight)
-import           Data.Map                                  (keys)
-import           Data.Text                                 (pack)
-import           Data.Text.Class                           (FromText(fromText))
-import           Data.Void                                 (Void)
-import           Ledger                                    (CardanoTx (..), Params (..), PaymentPubKeyHash, StakePubKeyHash, TxOutRef)
-import           Ledger.Ada                                (lovelaceValueOf)
-import           Ledger.Constraints                        (TxConstraints, ScriptLookups, mkTx, mustPayToPubKeyAddress, mustPayToPubKey)
-import           Ledger.Typed.Scripts                      (ValidatorTypes(..))
-import           Ledger.Tx                                 (getCardanoTxId)
-import           Ledger.Tx.CardanoAPI                      (unspentOutputsTx, SomeCardanoApiTx(..))
+import qualified Cardano.Wallet.Api.Client                          as Client
+import           Cardano.Wallet.Api.Types                           (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..), 
+                                                                     ApiSignTransactionPostData(ApiSignTransactionPostData))
+import           Cardano.Wallet.Api.Types.SchemaMetadata            (TxMetadataSchema(..))
+import           Cardano.Mnemonic                                   (SomeMnemonic, MkSomeMnemonic(..))
+import           Cardano.Wallet.Primitive.AddressDerivation         (WalletKey(digest, publicKey))
+import           Cardano.Wallet.Primitive.AddressDerivation.Shelley (generateKeyFromSeed)
+import           Cardano.Wallet.Primitive.Passphrase                (Passphrase (..), currentPassphraseScheme, preparePassphrase)
+import           Cardano.Wallet.Primitive.Types                     (WalletId(..))
+import           Control.Concurrent                                 (threadDelay)
+import           Control.FromSum                                    (fromEither)
+import           Control.Lens                                       ((^?))
+import           Control.Monad                                      (void, unless)
+import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
+import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
+import qualified Data.ByteString.Lazy                               as LB
+import           Data.Functor                                       ((<&>))
+import           Data.Either                                        (fromRight)
+import           Data.Map                                           (keys)
+import           Data.String                                        (IsString(..))
+import           Data.Text                                          (Text)
+import qualified Data.Text                                          as T
+import           Data.Text.Class                                    (FromText(fromText))
+import           Data.Void                                          (Void)
+import           GHC.Generics                                       (Generic)
+import           Ledger                                             (CardanoTx (..), Params (..), PaymentPubKeyHash, StakePubKeyHash, TxOutRef)
+import           Ledger.Ada                                         (lovelaceValueOf)
+import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mkTx, mustPayToPubKeyAddress, mustPayToPubKey)
+import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
+import           Ledger.Tx                                          (getCardanoTxId)
+import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
+import           Plutus.Contract.Wallet                             (export)
+import           PlutusTx.IsData                                    (ToData, FromData)
+import           PlutusTx.Prelude                                   hiding (mempty, pure, (<$>), unless, error)
+import           Prelude                                            (IO, mempty, (<$>), Show (..), print, String, Applicative (pure), error, FilePath)
+import           Utils.Prelude                                      (replicate)
+import qualified Utils.Servant                                      as Servant
+import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
-import           Plutus.Contract.Wallet                    (export)
-import           PlutusTx.IsData                           (ToData, FromData)
-import           PlutusTx.Prelude                          hiding (mempty, pure, (<$>), unless, error)
-import           Prelude                                   (IO, mempty, (<$>), Show (..), print, String, Applicative (pure), error)
-import           Utils.Prelude                             (replicate)
-import qualified Utils.Servant                             as Servant
-import           Utils.Tx
 
 getFromEndpoint :: Servant.Endpoint a
 getFromEndpoint = Servant.getFromEndpointOnPort 8090
@@ -110,7 +121,7 @@ awaitTxConfirmed ctx = go
         confirmedResponse res = case res ^? key "status"._String of
             Just "in_ledger" -> True
             _                -> False
-        mkHash = fromEither (error . show) . fromText . pack . show  . getCardanoTxId
+        mkHash = fromEither (error . show) . fromText . T.pack . show  . getCardanoTxId
 
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
 getWalletTxOutRefs :: Params -> PaymentPubKeyHash -> Maybe StakePubKeyHash -> Integer -> IO [TxOutRef]
@@ -134,3 +145,29 @@ getWalletTxOutRefs params pkh mbSkh n = do
         cons    = case mbSkh of
             Just skh -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skh $ lovelaceValueOf 10_000_000
             Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
+
+-- Restore-wallet JSON file content
+data RestoreWallet = RestoreWallet
+    { name :: Text
+    , mnemonicSentence :: SomeMnemonic
+    , passphrase :: Passphrase "user"
+    } deriving Generic
+
+instance FromJSON RestoreWallet where
+    parseJSON = withObject "Restore wallet" $ \v -> do 
+        name                   <- v .: "name"
+        Right mnemonicSentence <- v .: "mnemonic_sentence" <&> mkSomeMnemonic @'[ 24 ] . T.words
+        passphrase             <- v .: "passphrase"        <&> Passphrase . fromString . T.unpack
+        pure RestoreWallet{..}
+
+genWalletId :: SomeMnemonic -> Passphrase "user" -> WalletId
+genWalletId mnemonic pwd = WalletId $ digest $ publicKey rootXPrv
+  where
+    rootXPrv = generateKeyFromSeed (mnemonic, Nothing) pwdP
+    pwdP = preparePassphrase currentPassphraseScheme pwd
+
+-- Read restore-wallet JSON file and generate walletId from it
+walletIdFromFile :: FilePath -> IO WalletId
+walletIdFromFile fp = eitherDecode <$> LB.readFile fp >>= \case
+    Right RestoreWallet{..} -> pure $ genWalletId mnemonicSentence passphrase
+    Left err                -> error err
