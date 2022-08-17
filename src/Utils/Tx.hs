@@ -12,9 +12,10 @@
 
 module Utils.Tx where
 
-import           Cardano.Api.Shelley               (EraInMode (..), AsType (..), SerialiseAsCBOR (..), InAnyCardanoEra (InAnyCardanoEra), toEraInMode, ConsensusMode (CardanoMode), Tx (Tx), AnyCardanoEra (AnyCardanoEra), CardanoEra (BabbageEra))
+import           Cardano.Api.Shelley               (EraInMode (..), AsType (..), SerialiseAsCBOR (..), InAnyCardanoEra (InAnyCardanoEra), 
+                                                    toEraInMode, ConsensusMode (CardanoMode), AnyCardanoEra (AnyCardanoEra), CardanoEra (BabbageEra))
 import           Cardano.Wallet.Api.Types          (ApiSerialisedTransaction(..), getApiT)
-import           Cardano.Wallet.Primitive.Types.Tx (SealedTx, sealedTxFromCardano', getSealedTxBody, cardanoTxIdeallyNoLaterThan)
+import           Cardano.Wallet.Primitive.Types.Tx (SealedTx, sealedTxFromCardano', cardanoTxIdeallyNoLaterThan)
 import           Data.Aeson.Extras                 (encodeByteString, tryDecode)
 import           Data.Text                         (Text)
 import           Ledger                            (Params)
