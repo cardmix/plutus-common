@@ -30,7 +30,7 @@ import           Cardano.Wallet.Primitive.Types                     (WalletId(..
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((^?))
-import           Control.Monad                                      (void, unless)
+import           Control.Monad                                      (void, unless, MonadFail (fail))
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
@@ -156,7 +156,7 @@ data RestoreWallet = RestoreWallet
 instance FromJSON RestoreWallet where
     parseJSON = withObject "Restore wallet" $ \v -> do 
         name                   <- v .: "name"
-        Right mnemonicSentence <- v .: "mnemonic_sentence" <&> mkSomeMnemonic @'[ 24 ] . T.words
+        mnemonicSentence       <- v .: "mnemonic_sentence" >>= either (fail . show) pure . mkSomeMnemonic @'[ 24 ]
         passphrase             <- v .: "passphrase"        <&> Passphrase . fromString . T.unpack
         pure RestoreWallet{..}
 

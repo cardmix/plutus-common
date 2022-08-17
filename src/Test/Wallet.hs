@@ -24,7 +24,7 @@ import           Data.Maybe                          (fromJust)
 import           Data.String                         (IsString(fromString))
 import           Data.Text                           (Text)
 import qualified Data.Text                           as T
-import           IO.Wallet                           (getWalletTxOutRefs, genWalletId)
+import           IO.Wallet                           (getWalletTxOutRefs, genWalletId, walletIdFromFile)
 import           Ledger                              (Params(..), TxOutRef)
 import           Prelude                             hiding (readFile)
 import           Utils.Address                       (bech32ToKeyHashes)
@@ -40,17 +40,12 @@ test = do
       ledgerParams = Params def pp networkId
   getWalletTxOutRefs ledgerParams pkh skh 1
 
-testWalletGen1 :: Bool
-testWalletGen1 = "6f0638a327b5520e71861fa973722fe7426db058" == show 
-    (getWalletId $ genWalletId 
-    (fromRight undefined $ mkSomeMnemonic @'[ 24 ] . T.words $ 
-    "dilemma urge debris lava mind open stem skin ticket force love narrow grab blouse inherit orient purity turn metal embody please now tower blast") 
-    (Passphrase $ fromString "1234567890"))
-
-testWalletGen2 :: Bool
-testWalletGen2 = "2233e2fc50a0d880e187f4a87de74234e960bd95" == show 
+testWalletGen :: Bool
+testWalletGen = "2233e2fc50a0d880e187f4a87de74234e960bd95" == show 
     (getWalletId $ genWalletId 
     (fromRight undefined $ mkSomeMnemonic @'[ 24 ] . T.words $ 
     "chronic distance live brand switch angry erase empty lobster defy disorder flush moon burst acoustic miracle creek wild excuse spike fork neutral market shuffle")
     (Passphrase $ fromString "1234567890"))
 
+testWaletIdFromFile :: IO WalletId
+testWaletIdFromFile = walletIdFromFile "src/Test/restore-wallet.json"
