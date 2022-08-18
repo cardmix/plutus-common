@@ -29,6 +29,12 @@ testAllAddr = do
     testByronAddr1
     putStrLn "byron test 2"
     testByronAddr2
+    putStrLn "contract test 1"
+    testContract1
+    putStrLn "contract test 2"
+    testContract2
+
+
 
 withTest :: Text -> IO ()
 withTest addr = do
@@ -93,3 +99,10 @@ testByronAddr1 = withTest "DdzFFzCqrhtArEct1dyJ75prgLDpo9zdkpGgy9Z1E7PJaZTwrbTCC
 -- Another Byron era address
 testByronAddr2 :: IO ()
 testByronAddr2 = withTest "37btjrVyb4KDXBNC4haBVPCrro8AQPHwvCMp3RFhhSVWwfFmZ6wwzSK6JK1hY6wHNmtrpTf1kdbva8TCneM2YsiXT7mrzT21EacHnPpz5YyUdj64na"
+
+-- Contract addresses
+testContract1 :: IO ()
+testContract1 = withTest "addr1zxj47sy4qxlktqzmkrw8dahe46gtv8seakrshsqz26qnvzypw288a4x0xf8pxgcntelxmyclq83s0ykeehchz2wtspksr3q9nx"
+
+testContract2 :: IO ()
+testContract2 = withTest "addr1wxjwdkrr0ctw3dq9qm5vcr0jgd9n8k82y57ehurmfgnw5cgrxh0hr"
