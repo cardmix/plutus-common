@@ -1,20 +1,23 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE NumericUnderscores         #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE AllowAmbiguousTypes          #-}
+{-# LANGUAGE DataKinds                    #-}
+{-# LANGUAGE DeriveGeneric                #-}
+{-# LANGUAGE DerivingStrategies           #-}
+{-# LANGUAGE FlexibleContexts             #-}
+{-# LANGUAGE FlexibleInstances            #-}
+{-# LANGUAGE LambdaCase                   #-}
+{-# LANGUAGE MultiParamTypeClasses        #-}
+{-# LANGUAGE NoImplicitPrelude            #-}
+{-# LANGUAGE NumericUnderscores           #-}
+{-# LANGUAGE OverloadedStrings            #-}
+{-# LANGUAGE RecordWildCards              #-}
+{-# LANGUAGE ScopedTypeVariables          #-}
+{-# LANGUAGE TypeApplications             #-}
+{-# LANGUAGE TypeFamilies                 #-}
+{-# LANGUAGE ViewPatterns                 #-}
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant <$>"          #-}
 
 module IO.Wallet where
 
