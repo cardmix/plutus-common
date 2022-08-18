@@ -9,6 +9,27 @@ import Data.Text (Text)
 import qualified Data.Map as Map
 import Ledger.Tx
 
+testAllAddr :: IO ()
+testAllAddr = do
+    putStrLn "test1"
+    test1
+    putStrLn "test2"
+    test2
+    putStrLn "test3"
+    test3
+    putStrLn "test4"
+    test4
+    putStrLn "test5"
+    test5
+    putStrLn "test6"
+    test6
+    putStrLn "test7"
+    test7
+    putStrLn "byron test 1"
+    testByronAddr1
+    putStrLn "byron test 2"
+    testByronAddr2
+
 withTest :: Text -> IO ()
 withTest addr = do
     let Just a = bech32ToAddress addr
@@ -16,6 +37,7 @@ withTest addr = do
     print a
     utxos <- getUtxosAt a
     putStrLn "\nUTXOS:"
+    print utxos
     mapM_ print utxos
 
 -- Addres that failed with undefined from src/Ledger/Tx/CardanoAPI.hs:252:5 in 
@@ -63,3 +85,11 @@ testSum1 = testSum "addr_test1qzq92mxzllakzsdfcdmpmy9596lsvg3ecszuyc583r3txf2svn
 -- Shows correct amount of ada
 testSum2 :: IO ()
 testSum2 = testSum "addr_test1qz9vf05xvsj6704l3wam2sk7mhdu83uacdzl7xf9yj93jztye3y03y730kx6gz52sar3yqw0zdxz32k5tak94spz07fqvugl3j"
+
+-- Old daedalus-style address from Byron era
+testByronAddr1 :: IO ()
+testByronAddr1 = withTest "DdzFFzCqrhtArEct1dyJ75prgLDpo9zdkpGgy9Z1E7PJaZTwrbTCCxmAhFiUqSynYRTRfYThybHzmHbTJJ7xD6uEJoyXq3xqgZA35zp5"
+
+-- Another Byron era address
+testByronAddr2 :: IO ()
+testByronAddr2 = withTest "37btjrVyb4KDXBNC4haBVPCrro8AQPHwvCMp3RFhhSVWwfFmZ6wwzSK6JK1hY6wHNmtrpTf1kdbva8TCneM2YsiXT7mrzT21EacHnPpz5YyUdj64na"
