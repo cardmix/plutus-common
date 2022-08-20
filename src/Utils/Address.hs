@@ -33,9 +33,8 @@ bech32ToKeyHashes txt = do
     pkh  <- toPubKeyHash addr
     let skh = case stakingCredential addr of
             Just (StakingHash (PubKeyCredential spkh)) -> Just $ StakePubKeyHash spkh
-            Just (StakingHash (ScriptCredential vh))   -> Nothing
-            Just (StakingPtr{})                        -> Nothing -- yet?
-            Nothing                                    -> Nothing
+            Just StakingPtr{}                          -> Nothing -- yet?
+            _                                          -> Nothing
     pure (PaymentPubKeyHash pkh, skh)
 
 -- Convert bech32 Shelley/Byron address to Plutus Address
