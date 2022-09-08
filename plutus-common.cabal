@@ -38,6 +38,7 @@ library
       Utils.Address
       Utils.ByteString
       Utils.Tx
+      Utils.Passphrase
       Utils.Prelude
       Utils.Servant
     other-modules:
@@ -92,5 +93,6 @@ library
       generic-arbitrary                      -any,
       prettyprinter                          -any,
       QuickCheck                             -any,
-      uuid                                   -any
+      uuid                                   -any,
+
     hs-source-dirs: src
