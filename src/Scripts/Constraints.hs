@@ -16,7 +16,7 @@ import qualified Data.Map
 import           Ledger                           (ChainIndexTxOut, contains, interval)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
 import           Ledger.Constraints.TxConstraints (mustSpendPubKeyOutput, mustSpendScriptOutput, mustPayWithDatumToPubKey, mustPayWithDatumToPubKeyAddress,
-                                                    mustPayToOtherScriptAddress, mustPayToOtherScript, mustValidateIn, mustMintValueWithRedeemer, mustReferencePubKeyOutput)
+                                                    mustPayToOtherScriptAddress, mustPayToOtherScript, mustValidateIn, mustMintValueWithRedeemer, mustReferenceOutput)
 import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2MintingPolicy, plutusV2OtherScript)
 import           Plutus.V2.Ledger.Api
 import           Plutus.V2.Ledger.Contexts        (findDatum, findOwnInput, ownCurrencySymbol)
@@ -167,7 +167,7 @@ utxoReferencedTx' f = do
         else do
             let utxo = head $ Data.Map.toList utxos
                 ref  = fst utxo
-            put constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustReferencePubKeyOutput ref) }
+            put constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustReferenceOutput ref) }
             return $ Just utxo
 
 utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> datum -> State (TxConstructor d a i o) ()
