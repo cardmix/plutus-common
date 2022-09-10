@@ -34,6 +34,7 @@ library
       IO.Time
       IO.Wallet
       Scripts.Constraints
+      Scripts.OneShotCurrency
       Types.TxConstructor
       Utils.Address
       Utils.ByteString
@@ -80,6 +81,7 @@ library
       plutus-ledger                          -any,
       plutus-ledger-api                      -any,
       plutus-ledger-constraints              -any,
+      plutus-script-utils                    -any,
       plutus-use-cases                       -any,
       purescript-bridge                      -any,
       random                                 -any,
