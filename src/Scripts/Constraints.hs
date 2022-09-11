@@ -71,6 +71,11 @@ findUtxoProduced :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
 findUtxoProduced info f = find f outs
     where outs = txInfoOutputs info
 
+{-# INLINABLE filterUtxoProduced #-}
+filterUtxoProduced :: TxInfo -> (TxOut -> Bool) -> [TxOut]
+filterUtxoProduced info f = filter f outs
+    where outs = txInfoOutputs info
+
 {-# INLINABLE utxoProduced #-}
 utxoProduced :: TxInfo -> (TxOut -> Bool) -> Bool
 utxoProduced info = isJust . findUtxoProduced info
