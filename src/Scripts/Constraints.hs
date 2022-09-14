@@ -43,6 +43,11 @@ findUtxoSpent :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
 findUtxoSpent info f = find f ins
     where ins = map txInInfoResolved $ txInfoInputs info
 
+{-# INLINABLE filterUtxoSpent #-}
+filterUtxoSpent :: TxInfo -> (TxOut -> Bool) -> [TxOut]
+filterUtxoSpent info f = filter f ins
+    where ins = map txInInfoResolved $ txInfoInputs info
+
 {-# INLINABLE utxoSpent #-}
 utxoSpent :: TxInfo -> (TxOut -> Bool) -> Bool
 utxoSpent info = isJust . findUtxoSpent info
@@ -52,6 +57,11 @@ findUtxoReferenced :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
 findUtxoReferenced info f = find f ins
     where ins = map txInInfoResolved $ txInfoReferenceInputs info
 
+{-# INLINABLE filterUtxoReferenced #-}
+filterUtxoReferenced :: TxInfo -> (TxOut -> Bool) -> [TxOut]
+filterUtxoReferenced info f = filter f ins
+    where ins = map txInInfoResolved $ txInfoReferenceInputs info
+
 {-# INLINABLE utxoReferenced #-}
 utxoReferenced :: TxInfo -> (TxOut -> Bool) -> Bool
 utxoReferenced info = isJust . findUtxoReferenced info
@@ -59,6 +69,11 @@ utxoReferenced info = isJust . findUtxoReferenced info
 {-# INLINABLE findUtxoProduced #-}
 findUtxoProduced :: TxInfo -> (TxOut -> Bool) -> Maybe TxOut
 findUtxoProduced info f = find f outs
+    where outs = txInfoOutputs info
+
+{-# INLINABLE filterUtxoProduced #-}
+filterUtxoProduced :: TxInfo -> (TxOut -> Bool) -> [TxOut]
+filterUtxoProduced info f = filter f outs
     where outs = txInfoOutputs info
 
 {-# INLINABLE utxoProduced #-}

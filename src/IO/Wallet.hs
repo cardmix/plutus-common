@@ -15,10 +15,6 @@
 {-# LANGUAGE TypeFamilies                 #-}
 {-# LANGUAGE ViewPatterns                 #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Redundant <$>"          #-}
-
 module IO.Wallet where
 
 import qualified Cardano.Wallet.Api.Client                          as Client
@@ -34,7 +30,7 @@ import           Cardano.Wallet.Primitive.Types.Address             (AddressStat
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
-import           Control.Monad                                      (void, unless, MonadFail (fail))
+import           Control.Monad                                      (void, unless)
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
