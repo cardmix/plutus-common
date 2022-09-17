@@ -145,7 +145,8 @@ utxoSpentPublicKeyTx' f = do
         else do
             let utxo = head $ Data.Map.toList utxos
                 ref  = fst utxo
-            put constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustSpendPubKeyOutput ref) }
+            put constr { txConstructorResult = res <> Just (unspentOutputs (Data.Map.fromList [utxo]), mustSpendPubKeyOutput ref),
+                txConstructorLookups = Data.Map.delete ref lookups }
             return $ Just utxo
 
 utxoSpentScriptTx :: ToData redeemer => (TxOutRef -> ChainIndexTxOut -> Bool) -> (TxOutRef -> ChainIndexTxOut -> Validator) ->
@@ -164,8 +165,9 @@ utxoSpentScriptTx' f scriptVal red = do
         else do
             let utxo = head $ Data.Map.toList utxos
                 ref  = fst utxo
-            put constr { txConstructorResult = res <> Just (unspentOutputs utxos <> plutusV2OtherScript (uncurry scriptVal utxo),
-                mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)) }
+            put constr { txConstructorResult = res <> Just (unspentOutputs (Data.Map.fromList [utxo]) <> plutusV2OtherScript (uncurry scriptVal utxo),
+                mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)),
+                txConstructorLookups = Data.Map.delete ref lookups }
             return $ Just utxo
 
 utxoReferencedTx :: (TxOutRef -> ChainIndexTxOut -> Bool) -> State (TxConstructor d a i o) (Maybe (TxOutRef, ChainIndexTxOut))
@@ -182,7 +184,8 @@ utxoReferencedTx' f = do
         else do
             let utxo = head $ Data.Map.toList utxos
                 ref  = fst utxo
-            put constr { txConstructorResult = res <> Just (unspentOutputs utxos, mustReferenceOutput ref) }
+            put constr { txConstructorResult = res <> Just (unspentOutputs (Data.Map.fromList [utxo]), mustReferenceOutput ref),
+                txConstructorLookups = Data.Map.delete ref lookups }
             return $ Just utxo
 
 utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> datum -> State (TxConstructor d a i o) ()
