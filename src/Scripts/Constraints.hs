@@ -13,11 +13,13 @@ module Scripts.Constraints where
 import           Control.Monad.State              (State, MonadState (..))
 import           Data.Maybe                       (fromJust)
 import qualified Data.Map
-import           Ledger                           (ChainIndexTxOut, contains, interval)
+import           Ledger                           (ChainIndexTxOut, contains, interval, Versioned, mintingPolicyHash, validatorHash)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
 import           Ledger.Constraints.TxConstraints (mustSpendPubKeyOutput, mustSpendScriptOutput, mustPayWithDatumToPubKey, mustPayWithDatumToPubKeyAddress,
-                                                    mustPayToOtherScriptAddress, mustPayToOtherScript, mustValidateIn, mustMintValueWithRedeemer, mustReferenceOutput)
-import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2MintingPolicy, plutusV2OtherScript)
+                                                    mustPayToOtherScriptAddress, mustPayToOtherScript, mustValidateIn, mustMintValueWithRedeemer, mustReferenceOutput,
+                                                    mustPayToAddressWithReferenceMintingPolicy, mustPayToAddressWithReferenceValidator
+                                                  )
+import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2MintingPolicy, plutusV2OtherScript, otherData, mintingPolicy, otherScript)
 import           Plutus.V2.Ledger.Api
 import           Plutus.V2.Ledger.Contexts        (findDatum, findOwnInput, ownCurrencySymbol)
 import           PlutusTx.AssocMap                (lookup)
@@ -221,3 +223,21 @@ validatedInIntervalTx startTime endTime = do
     if cond
         then put constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) }
         else put constr { txConstructorResult = Nothing }
+
+postValidatorTx :: Address -> Versioned Validator -> (Maybe Datum) -> Value -> State (TxConstructor d a i o) ()
+postValidatorTx addr vld dat val = do
+    constr <- get
+    let res     = txConstructorResult constr
+        hash    = validatorHash vld
+        c       = mustPayToAddressWithReferenceValidator addr hash dat val
+        lookups = otherScript vld
+    put constr { txConstructorResult = res <> Just (lookups, c)}
+
+postMintingPolicyTx :: Address -> Versioned MintingPolicy -> (Maybe Datum) -> Value -> State (TxConstructor d a i o) ()
+postMintingPolicyTx addr mp dat val = do
+    constr <- get
+    let res     = txConstructorResult constr
+        hash    = mintingPolicyHash mp
+        c       = mustPayToAddressWithReferenceMintingPolicy addr hash dat val
+        lookups = mintingPolicy mp
+    put constr { txConstructorResult = res <> Just (lookups, c)}
