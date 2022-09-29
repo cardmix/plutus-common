@@ -254,3 +254,10 @@ referenceScriptTx txOutRef = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <> Just (mempty, mustReferenceOutput txOutRef) }
+
+datumTx :: ToData a => a -> State (TxConstructor d a i o) ()
+datumTx a = do
+    constr <- get 
+    let res = txConstructorResult constr
+        dat = Datum $ toBuiltinData a
+    put constr { txConstructorResult = res <> Just (otherData dat, mempty) }
