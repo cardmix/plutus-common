@@ -241,3 +241,16 @@ postMintingPolicyTx addr mp dat val = do
         c       = mustPayToAddressWithReferenceMintingPolicy addr hash dat val
         lookups = mintingPolicy mp
     put constr { txConstructorResult = res <> Just (lookups, c)}
+
+referenceMintingPolicyTx :: ToData redeemer => TxOutRef -> redeemer -> Value -> State (TxConstructor d a i o) ()
+referenceMintingPolicyTx txOutRef red v = do
+    constr <- get
+    let res = txConstructorResult constr
+        c = mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v <> mustReferenceOutput txOutRef
+    put constr { txConstructorResult = res <> Just (mempty, c) }
+
+referenceScriptTx :: TxOutRef -> State (TxConstructor d a i o) ()
+referenceScriptTx txOutRef = do
+    constr <- get
+    let res = txConstructorResult constr
+    put constr { txConstructorResult = res <> Just (mempty, mustReferenceOutput txOutRef) }
