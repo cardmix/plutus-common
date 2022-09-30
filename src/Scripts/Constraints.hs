@@ -249,8 +249,8 @@ referenceMintingPolicyTx txOutRef red v = do
         c = mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v <> mustReferenceOutput txOutRef
     put constr { txConstructorResult = res <> Just (mempty, c) }
 
-referenceScriptTx :: TxOutRef -> State (TxConstructor d a i o) ()
-referenceScriptTx txOutRef = do
+referenceValidatorTx :: TxOutRef -> State (TxConstructor d a i o) ()
+referenceValidatorTx txOutRef = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <> Just (mempty, mustReferenceOutput txOutRef) }
