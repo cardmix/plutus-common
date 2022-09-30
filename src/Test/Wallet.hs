@@ -11,7 +11,6 @@
 {-# LANGUAGE TypeApplications           #-}
 
 module Test.Wallet where
-
 import           Cardano.Api.Shelley                 (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
 import           Cardano.Mnemonic                    (MkSomeMnemonic(..))
 import           Cardano.Wallet.Primitive.Passphrase (Passphrase(..))

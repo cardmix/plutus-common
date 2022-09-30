@@ -77,13 +77,11 @@ getFromEndpoint = Servant.getFromEndpointOnPort 8090
 getWalletFromId :: WalletId -> IO ApiWallet
 getWalletFromId = getFromEndpoint . Client.getWallet Client.walletClient . ApiT 
 
--- getKnownWalletId :: IO WalletId
--- getKnownWalletId = getApiT . Wallet.id <$> getKnownWallet
-
--- getKnownWallet :: IO ApiWallet
--- getKnownWallet = getFromEndpoint $ Client.listWallets Client.walletClient >>= \case
---     w:_ -> pure w
---     _   -> error "There is no any known wallets yet."
+ownAddresses :: IO [Text]
+ownAddresses = do
+    walletId <- getWalletId
+    as <- getFromEndpoint $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
+    pure $ map (^. key "id"._String) as
 
 signTx :: CardanoTx -> IO CardanoTx
 signTx (cardanoTxToSealedTx -> Just stx) = do
