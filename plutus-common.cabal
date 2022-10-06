@@ -89,6 +89,7 @@ library
       serialise                              -any,
       servant                                -any,
       servant-client                         -any,
+      servant-client-core                    -any,
       text                                   -any,
       text-class                             -any,
       time                                   -any,

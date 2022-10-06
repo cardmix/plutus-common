@@ -224,7 +224,7 @@ validatedInIntervalTx startTime endTime = do
         then put constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) }
         else put constr { txConstructorResult = Nothing }
 
-postValidatorTx :: Address -> Versioned Validator -> (Maybe Datum) -> Value -> State (TxConstructor d a i o) ()
+postValidatorTx :: Address -> Versioned Validator -> Maybe Datum -> Value -> State (TxConstructor d a i o) ()
 postValidatorTx addr vld dat val = do
     constr <- get
     let res     = txConstructorResult constr
@@ -233,7 +233,7 @@ postValidatorTx addr vld dat val = do
         lookups = otherScript vld
     put constr { txConstructorResult = res <> Just (lookups, c)}
 
-postMintingPolicyTx :: Address -> Versioned MintingPolicy -> (Maybe Datum) -> Value -> State (TxConstructor d a i o) ()
+postMintingPolicyTx :: Address -> Versioned MintingPolicy -> Maybe Datum -> Value -> State (TxConstructor d a i o) ()
 postMintingPolicyTx addr mp dat val = do
     constr <- get
     let res     = txConstructorResult constr

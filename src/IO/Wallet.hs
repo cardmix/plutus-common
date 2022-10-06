@@ -49,14 +49,11 @@ import           Ledger.Tx                                          (getCardanoT
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
--- import           PlutusTx.Prelude                                   hiding (mempty, pure, (<$>), unless, error)
--- import           Prelude                                            (IO, mempty, (<$>), Show (..), print, Applicative (pure), error, FilePath, putStrLn)
+import           Prelude                                            hiding (replicate)
 import           Utils.Passphrase                                   (convertPassphrase)
 import           Utils.Prelude                                      (replicate)
 import qualified Utils.Servant                                      as Servant
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
-
-import Prelude hiding (replicate)
 
 getWalletId :: IO WalletId
 getWalletId = walletIdFromFile "testnet/wallet.json"
