@@ -16,12 +16,12 @@ import           Cardano.Api.Shelley             (AsType (..), StakeAddress(..),
                                                   deserialiseFromBech32)
 import           Cardano.Chain.Common            (decodeAddressBase58)
 import           Cardano.Ledger.Alonzo.TxInfo    (transKeyHash)
-import           Cardano.Ledger.Address          (bootstrapKeyHash, BootstrapAddress (BootstrapAddress))
+import           Cardano.Ledger.Address          (BootstrapAddress (BootstrapAddress), bootstrapKeyHash)
 import qualified Cardano.Ledger.Credential       as Shelley
 import           Cardano.Ledger.Crypto           (StandardCrypto)
 import           Control.FromSum                 (eitherToMaybe)
-import           Ledger.Address                  (PaymentPubKeyHash(..), StakePubKeyHash(..), Address(..), pubKeyHashAddress, toPubKeyHash, 
-                                                  stakingCredential)
+import           Ledger.Address                  (PaymentPubKeyHash(..), StakePubKeyHash(..), Address(..),
+                                                    pubKeyHashAddress, toPubKeyHash, stakingCredential)
 import           Ledger.Tx.CardanoAPI            (fromCardanoAddress)
 import           Plutus.V1.Ledger.Credential     (Credential(..), StakingCredential(..))
 import           PlutusTx.Prelude                hiding (asum, error)
@@ -44,7 +44,7 @@ bech32ToAddress txt = asum $ map ($ txt) [bech32ToShelley, bech32ToByron]
 bech32ToShelley :: Text -> Maybe Address
 bech32ToShelley txt = do
     sAddr <- eitherToMaybe (deserialiseFromBech32 AsShelleyAddress txt)
-    eitherToMaybe $ fromCardanoAddress sAddr
+    Just $ fromCardanoAddress sAddr
 
 bech32ToByron :: Text -> Maybe Address
 bech32ToByron txt =  fromByron <$> eitherToMaybe (decodeAddressBase58 txt)

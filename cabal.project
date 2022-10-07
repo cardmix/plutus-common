@@ -26,7 +26,7 @@ source-repository-package
     plutus-streaming
     rewindable-index
     web-ghc  
-  tag: 97a2b78c062338a69b1a91d19802b24b8a6daa92
+  tag: 4c832ce2999269376a94c26352faae17e5b5b6d3
 
 -- We never, ever, want this.
 write-ghc-environment-files: never

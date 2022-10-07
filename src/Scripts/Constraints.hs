@@ -13,12 +13,9 @@ module Scripts.Constraints where
 import           Control.Monad.State              (State, MonadState (..))
 import           Data.Maybe                       (fromJust)
 import qualified Data.Map
-import           Ledger                           (ChainIndexTxOut, contains, interval, Versioned, mintingPolicyHash, validatorHash)
+import           Ledger                           (ChainIndexTxOut, Versioned, mintingPolicyHash, validatorHash, contains, interval)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
-import           Ledger.Constraints.TxConstraints (mustSpendPubKeyOutput, mustSpendScriptOutput, mustPayWithDatumToPubKey, mustPayWithDatumToPubKeyAddress,
-                                                    mustPayToOtherScriptAddress, mustPayToOtherScript, mustValidateIn, mustMintValueWithRedeemer, mustReferenceOutput,
-                                                    mustPayToAddressWithReferenceMintingPolicy, mustPayToAddressWithReferenceValidator
-                                                  )
+import           Ledger.Constraints.TxConstraints 
 import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2MintingPolicy, plutusV2OtherScript, otherData, mintingPolicy, otherScript)
 import           Plutus.V2.Ledger.Api
 import           Plutus.V2.Ledger.Contexts        (findDatum, findOwnInput, ownCurrencySymbol)
@@ -190,22 +187,24 @@ utxoReferencedTx' f = do
                 txConstructorLookups = Data.Map.delete ref lookups }
             return $ Just utxo
 
-utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> datum -> State (TxConstructor d a i o) ()
+utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakePubKeyHash -> Value -> Maybe datum -> State (TxConstructor d a i o) ()
 utxoProducedPublicKeyTx pkh skh val dat = do
     constr <- get
     let res = txConstructorResult constr
-        c   = if isJust skh
-            then mustPayWithDatumToPubKeyAddress pkh (fromJust skh) (Datum $ toBuiltinData dat) val
-            else mustPayWithDatumToPubKey pkh (Datum $ toBuiltinData dat) val
+        c | isJust skh = if isJust dat
+            then mustPayWithDatumToPubKeyAddress pkh (fromJust skh) (Datum $ toBuiltinData $ fromJust dat) val
+            else mustPayToPubKeyAddress pkh (fromJust skh) val
+          | otherwise = if isJust dat
+            then mustPayWithDatumToPubKey pkh (Datum $ toBuiltinData $ fromJust dat) val
+            else mustPayToPubKey pkh val
     put constr { txConstructorResult = res <> Just (mempty, c) }
 
 utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakeValidatorHash -> Value -> datum -> State (TxConstructor d a i o) ()
 utxoProducedScriptTx vh svh val dat = do
     constr <- get
     let res = txConstructorResult constr
-        c   = if isJust svh
-            then mustPayToOtherScriptAddress vh (fromJust svh) (Datum $ toBuiltinData dat) val
-            else mustPayToOtherScript vh (Datum $ toBuiltinData dat) val
+        c | isJust svh = mustPayToOtherScriptAddress vh (fromJust svh) (Datum $ toBuiltinData dat) val
+          | otherwise  = mustPayToOtherScript vh (Datum $ toBuiltinData dat) val
     put constr { txConstructorResult = res <> Just (mempty, c) }
 
 tokensMintedTx :: ToData redeemer => MintingPolicy -> redeemer -> Value -> State (TxConstructor d a i o) ()
@@ -224,21 +223,21 @@ validatedInIntervalTx startTime endTime = do
         then put constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) }
         else put constr { txConstructorResult = Nothing }
 
-postValidatorTx :: Address -> Versioned Validator -> Maybe Datum -> Value -> State (TxConstructor d a i o) ()
+postValidatorTx :: ToData datum => Address -> Versioned Validator -> Maybe datum -> Value -> State (TxConstructor d a i o) ()
 postValidatorTx addr vld dat val = do
     constr <- get
     let res     = txConstructorResult constr
         hash    = validatorHash vld
-        c       = mustPayToAddressWithReferenceValidator addr hash dat val
+        c       = mustPayToAddressWithReferenceValidator addr hash (fmap (TxOutDatumHash . Datum . toBuiltinData) dat) val
         lookups = otherScript vld
     put constr { txConstructorResult = res <> Just (lookups, c)}
 
-postMintingPolicyTx :: Address -> Versioned MintingPolicy -> Maybe Datum -> Value -> State (TxConstructor d a i o) ()
+postMintingPolicyTx :: ToData datum => Address -> Versioned MintingPolicy -> Maybe datum -> Value -> State (TxConstructor d a i o) ()
 postMintingPolicyTx addr mp dat val = do
     constr <- get
     let res     = txConstructorResult constr
         hash    = mintingPolicyHash mp
-        c       = mustPayToAddressWithReferenceMintingPolicy addr hash dat val
+        c       = mustPayToAddressWithReferenceMintingPolicy addr hash (fmap (TxOutDatumHash . Datum . toBuiltinData) dat) val
         lookups = mintingPolicy mp
     put constr { txConstructorResult = res <> Just (lookups, c)}
 
@@ -249,15 +248,15 @@ referenceMintingPolicyTx txOutRef red v = do
         c = mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v <> mustReferenceOutput txOutRef
     put constr { txConstructorResult = res <> Just (mempty, c) }
 
-referenceScriptTx :: TxOutRef -> State (TxConstructor d a i o) ()
-referenceScriptTx txOutRef = do
+referenceValidatorTx :: TxOutRef -> State (TxConstructor d a i o) ()
+referenceValidatorTx txOutRef = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <> Just (mempty, mustReferenceOutput txOutRef) }
 
 datumTx :: ToData a => a -> State (TxConstructor d a i o) ()
 datumTx a = do
-    constr <- get 
+    constr <- get
     let res = txConstructorResult constr
         dat = Datum $ toBuiltinData a
     put constr { txConstructorResult = res <> Just (otherData dat, mempty) }
