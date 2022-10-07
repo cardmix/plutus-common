@@ -18,8 +18,9 @@
 module IO.Wallet where
 
 import qualified Cardano.Wallet.Api.Client                          as Client
-import           Cardano.Wallet.Api.Types                           (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..), 
-                                                                     ApiSignTransactionPostData(ApiSignTransactionPostData), ApiWallet())
+import           Cardano.Wallet.Api.Types                           (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..),
+                                                                     ApiSignTransactionPostData(ApiSignTransactionPostData), ApiWallet(),
+                                                                     ApiWalletUtxoSnapshot(..), ApiWalletUtxoSnapshotEntry(..))
 import           Cardano.Wallet.Api.Types.SchemaMetadata            (TxMetadataSchema(..))
 import           Cardano.Mnemonic                                   (SomeMnemonic, MkSomeMnemonic(..))
 import           Cardano.Wallet.Primitive.AddressDerivation         (WalletKey(digest, publicKey))
@@ -27,6 +28,7 @@ import           Cardano.Wallet.Primitive.AddressDerivation.Shelley (generateKey
 import           Cardano.Wallet.Primitive.Passphrase                (Passphrase (..), currentPassphraseScheme, preparePassphrase)
 import           Cardano.Wallet.Primitive.Types                     (WalletId(WalletId))
 import           Cardano.Wallet.Primitive.Types.Address             (AddressState(..))
+import qualified Cardano.Wallet.Primitive.Types.TokenMap            as TokenMap
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
@@ -161,6 +163,11 @@ getWalletTxOutRefs params pkh mbSkh n = do
         cons    = case mbSkh of
             Just skh -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skh $ lovelaceValueOf 10_000_000
             Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
+
+hasCleanUtxos :: IO Bool
+hasCleanUtxos = any (TokenMap.isEmpty . getApiT . assets) . entries <$> do
+    walletId <- getWalletId
+    getFromEndpoint $ Client.getWalletUtxoSnapshot Client.walletClient (ApiT walletId)
 
 ------------------------------------------- Restore-wallet -------------------------------------------
 
