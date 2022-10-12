@@ -241,18 +241,20 @@ postMintingPolicyTx addr mp dat val = do
         lookups = mintingPolicy mp
     put constr { txConstructorResult = res <> Just (lookups, c)}
 
-referenceMintingPolicyTx :: ToData redeemer => TxOutRef -> redeemer -> Value -> State (TxConstructor d a i o) ()
-referenceMintingPolicyTx txOutRef red v = do
+referenceMintingPolicyTx :: ToData redeemer => MintingPolicy -> TxOutRef -> redeemer -> Value -> State (TxConstructor d a i o) ()
+referenceMintingPolicyTx mp txOutRef red v = do
     constr <- get
-    let res = txConstructorResult constr
-        c = mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v <> mustReferenceOutput txOutRef
-    put constr { txConstructorResult = res <> Just (mempty, c) }
+    let res     = txConstructorResult constr
+        lookups = plutusV2MintingPolicy mp
+        c       = mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v <> mustReferenceOutput txOutRef
+    put constr { txConstructorResult = res <> Just (lookups, c) }
 
-referenceValidatorTx :: TxOutRef -> State (TxConstructor d a i o) ()
-referenceValidatorTx txOutRef = do
+referenceValidatorTx :: Validator -> TxOutRef -> State (TxConstructor d a i o) ()
+referenceValidatorTx val txOutRef = do
     constr <- get
-    let res = txConstructorResult constr
-    put constr { txConstructorResult = res <> Just (mempty, mustReferenceOutput txOutRef) }
+    let res     = txConstructorResult constr
+        lookups = plutusV2OtherScript val
+    put constr { txConstructorResult = res <> Just (lookups, mustReferenceOutput txOutRef) }
 
 datumTx :: ToData a => a -> State (TxConstructor d a i o) ()
 datumTx a = do
