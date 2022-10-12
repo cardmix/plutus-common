@@ -10,6 +10,8 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeApplications           #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Test.Wallet where
 import           Cardano.Api.Shelley                 (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
 import           Cardano.Mnemonic                    (MkSomeMnemonic(..))
@@ -23,10 +25,13 @@ import           Data.Maybe                          (fromJust)
 import           Data.String                         (IsString(fromString))
 import           Data.Text                           (Text)
 import qualified Data.Text                           as T
-import           IO.Wallet                           (getWalletTxOutRefs, genWalletId, walletIdFromFile)
+import           IO.Wallet                           (HasWallet(..), getWalletTxOutRefs, genWalletId, restoreWalletFromFile, walletIdFromFile)
 import           Ledger                              (Params(..), TxOutRef)
 import           Prelude                             hiding (readFile)
 import           Utils.Address                       (bech32ToKeyHashes)
+
+instance HasWallet IO where
+    getRestoreWallet = restoreWalletFromFile "testnet/wallet.json"
 
 daedalusAddress :: Text
 daedalusAddress = "addr_test1qpmv0wkr6z9sdqveecpuywrwcxyueft0wgle85cs9fhsvtgnt9a4spnfrrlpp7puw2lcx2zudf49ewyza4q9ha08qhdq7aezrw"

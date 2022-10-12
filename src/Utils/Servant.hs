@@ -1,13 +1,16 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Utils.Servant where
 
 import           Control.Exception                 (throw)
+import           Control.Monad.IO.Class            (MonadIO(..))
 import           Servant.Client                    (mkClientEnv, runClientM, ClientM, BaseUrl(..), Scheme(..) )
 import           Network.HTTP.Client               (newManager, defaultManagerSettings)
 
-type Endpoint a = ClientM a -> IO a
+type Endpoint a = forall m. MonadIO m => ClientM a -> m a
 
 getFromEndpointOnPort :: Int -> Endpoint a
-getFromEndpointOnPort port endpoint = do
+getFromEndpointOnPort port endpoint = liftIO $ do
     manager <- newManager defaultManagerSettings
     responseOrError <- runClientM 
         endpoint
