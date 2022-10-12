@@ -67,7 +67,7 @@ data RestoreWallet = RestoreWallet
     { name             :: Text
     , mnemonicSentence :: SomeMnemonic
     , passphrase       :: Passphrase "user"
-    } deriving Generic
+    } deriving (Show, Generic)
 
 instance FromJSON RestoreWallet where
     parseJSON = withObject "Restore wallet" $ \v -> do 
