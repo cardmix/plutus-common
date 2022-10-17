@@ -112,7 +112,7 @@ currencyValue :: OneShotCurrencyParams -> Value
 currencyValue cur = oneShotCurrencyValue (currencySymbol cur) cur
 
 -- Constraints that the OneShotCurrency is minted in the transaction
-oneShotCurrencyMintTx :: OneShotCurrencyParams -> State (TxConstructor d a i o) (Maybe (TxOutRef, ChainIndexTxOut))
+oneShotCurrencyMintTx :: OneShotCurrencyParams -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
 oneShotCurrencyMintTx par@(OneShotCurrencyParams ref _) = do
     tokensMintedTx (oneShotCurrencyPolicy par) () (currencyValue par)
     utxoSpentPublicKeyTx (\r _ -> r == ref)
