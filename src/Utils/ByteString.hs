@@ -12,6 +12,8 @@
 
 module Utils.ByteString where
 
+import           Ledger.Address                    (Address (..), PaymentPubKeyHash (..))
+import           Plutus.V2.Ledger.Api              (Credential(..), PubKeyHash (..), ValidatorHash (..), StakingCredential (..))
 import           PlutusTx.Prelude                  hiding ((<>))
 import           Prelude                           (Char, String)
 
@@ -39,6 +41,23 @@ instance ToBuiltinByteString Integer where
 instance ToBuiltinByteString [Integer] where
     {-# INLINABLE toBytes #-}
     toBytes = foldr (appendByteString . toBytes) emptyByteString
+
+instance ToBuiltinByteString Credential where
+    {-# INLINABLE toBytes #-}
+    toBytes (PubKeyCredential (PubKeyHash bs)) = bs
+    toBytes (ScriptCredential (ValidatorHash bs)) = bs
+
+instance ToBuiltinByteString Address where
+    {-# INLINABLE toBytes #-}
+    toBytes (Address cred1 sCred) = case sCred of
+        Just (StakingHash cred2) -> toBytes cred1 `appendByteString` toBytes cred2
+        Just (StakingPtr i1 i2 i3) -> toBytes cred1 `appendByteString` toBytes i1
+            `appendByteString` toBytes i2 `appendByteString` toBytes i3
+        Nothing -> toBytes cred1
+
+instance ToBuiltinByteString PaymentPubKeyHash where
+    {-# INLINABLE toBytes #-}
+    toBytes (PaymentPubKeyHash (PubKeyHash bs)) = bs
 
 {-# INLINABLE integerToByteString #-}
 integerToByteString :: Integer -> BuiltinByteString
