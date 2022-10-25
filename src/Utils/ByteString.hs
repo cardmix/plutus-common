@@ -55,6 +55,10 @@ instance ToBuiltinByteString Address where
             `appendByteString` toBytes i2 `appendByteString` toBytes i3
         Nothing -> toBytes cred1
 
+instance ToBuiltinByteString PubKeyHash where
+    {-# INLINABLE toBytes #-}
+    toBytes (PubKeyHash bs) = bs
+
 instance ToBuiltinByteString PaymentPubKeyHash where
     {-# INLINABLE toBytes #-}
     toBytes (PaymentPubKeyHash (PubKeyHash bs)) = bs
