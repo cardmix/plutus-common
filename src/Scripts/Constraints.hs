@@ -264,3 +264,9 @@ datumTx a = do
     let res = txConstructorResult constr
         dat = Datum $ toBuiltinData a
     put constr { txConstructorResult = res <> Just (otherData dat, mempty) }
+
+mustBeSignedByTx :: PaymentPubKeyHash -> State (TxConstructor a i o) ()
+mustBeSignedByTx pkh = do
+    constr <- get
+    let res = txConstructorResult constr
+    put constr { txConstructorResult = res <> Just (mempty, mustBeSignedBy pkh) }
