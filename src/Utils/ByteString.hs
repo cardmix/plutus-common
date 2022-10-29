@@ -70,6 +70,7 @@ integerToByteString n = consByteString r $ if q > 0 then integerToByteString q e
 
 {-# INLINABLE byteStringToList #-}
 byteStringToList :: BuiltinByteString -> [Integer]
+byteStringToList "" = []
 byteStringToList bs = indexByteString bs 0 : byteStringToList (dropByteString 1 bs)
 
 {-# INLINABLE byteStringToInteger #-}

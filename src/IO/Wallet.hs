@@ -53,7 +53,7 @@ import           Ledger.Tx.CardanoAPI                               (unspentOutp
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
 import           Prelude                                            hiding (replicate)
-import           Utils.Address                                      (bech32ToAddress)
+import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
 import           Utils.Passphrase                                   (convertPassphrase)
 import           Utils.Prelude                                      (replicate)
 import qualified Utils.Servant                                      as Servant
@@ -116,12 +116,19 @@ getWalletAddrBech32 = do
         v:_ -> pure $ v ^. key "id"._String
         _   -> error $  "There is no addresses associated with this wallet ID:\n" <> show walletId 
 
-getWalletAddr :: HasWallet m => m Address
+getWalletAddr :: HasWallet m => m Address 
 getWalletAddr = do
     addrWalletBech32 <- getWalletAddrBech32
     pure $ case bech32ToAddress <$> fromText addrWalletBech32 of
         Right (Just addr) -> addr 
         _                 -> error $ "Can't get wallet address from bech32: " <> T.unpack addrWalletBech32
+
+getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakePubKeyHash)
+getWalletKeyHashes = do
+    addrWalletBech32 <- getWalletAddrBech32
+    pure $ case bech32ToKeyHashes <$> fromText addrWalletBech32 of
+        Right (Just hashes) -> hashes
+        _                   -> error $ "Can't get wallet key hashes from bech32: " <> T.unpack addrWalletBech32
 
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
 getWalletFromId = getFromEndpoint . Client.getWallet Client.walletClient . ApiT 
