@@ -12,13 +12,14 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TupleSections              #-}
-
+{-# LANGUAGE UndecidableInstances       #-}
 
 module IO.ChainIndex where
 
 import           Cardano.Api                       (FromJSON, ToJSON)
 import           Control.Applicative               (Applicative(..))
 import           Control.Monad.Extra               (mconcatMapM)
+import           Control.Monad.IO.Class            (MonadIO(..))
 import           Data.Default                      (Default (def))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
@@ -47,14 +48,17 @@ getFromEndpoint = Servant.getFromEndpointOnPort 9083
 cacheValidityPeriod :: POSIXTime
 cacheValidityPeriod = 30_000
 
-updateChainIndexCache :: ChainIndexCache -> IO ChainIndexCache
-updateChainIndexCache oldCache@(ChainIndexCache addrs _ cTime) = do
-    curTime <- currentTime
-    if curTime - cTime <= cacheValidityPeriod
-        then return oldCache
-        else do
-            utxos  <- mconcatMapM getUtxosAt addrs
-            ChainIndexCache addrs utxos <$> currentTime
+class HasUtxoData m where
+    updateChainIndexCache :: ChainIndexCache -> m ChainIndexCache
+
+instance MonadIO m => HasUtxoData m where
+    updateChainIndexCache oldCache@(ChainIndexCache addrs _ cTime) = do
+        curTime <- currentTime
+        if curTime - cTime <= cacheValidityPeriod
+            then return oldCache
+            else do
+                utxos  <- liftIO $ mconcatMapM getUtxosAt addrs
+                ChainIndexCache addrs utxos <$> currentTime
 
 ----------------------------------- Chain index queries ---------------------------------
 
