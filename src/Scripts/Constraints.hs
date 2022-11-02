@@ -220,7 +220,7 @@ validatedInIntervalTx startTime endTime = do
     constr <- get
     let ct   = txCurrentTime constr
         res  = txConstructorResult constr
-        cond = startTime <= ct &&  ct <= endTime
+        cond = startTime <= ct && ct <= endTime
     if cond
         then put constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) }
         else put constr { txConstructorResult = Nothing }
