@@ -228,8 +228,6 @@ getWalletTxOutRefs params pkh mbSkh n = do
             Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
 
 hasCleanUtxos :: HasWallet m => m Bool
-hasCleanUtxos = any (TokenMap.isEmpty . getApiT . assets) . entries <$> getWalletUTXOSnapshot
-
-getWalletUTXOSnapshot :: HasWallet m => m ApiWalletUtxoSnapshot
-getWalletUTXOSnapshot = getWalletId >>= 
-    getFromEndpoint . Client.getWalletUtxoSnapshot Client.walletClient . ApiT
+hasCleanUtxos = any (TokenMap.isEmpty . getApiT . assets) . entries <$> do
+    walletId <- getWalletId
+    getFromEndpoint $ Client.getWalletUtxoSnapshot Client.walletClient (ApiT walletId)
