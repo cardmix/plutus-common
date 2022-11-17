@@ -226,8 +226,3 @@ getWalletTxOutRefs params pkh mbSkh n = do
         cons    = case mbSkh of
             Just skh -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skh $ lovelaceValueOf 10_000_000
             Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
-
-hasCleanUtxos :: HasWallet m => m Bool
-hasCleanUtxos = any (TokenMap.isEmpty . getApiT . assets) . entries <$> do
-    walletId <- getWalletId
-    getFromEndpoint $ Client.getWalletUtxoSnapshot Client.walletClient (ApiT walletId)

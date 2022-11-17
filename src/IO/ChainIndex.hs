@@ -25,6 +25,7 @@ import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
 import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef (txOutRefId), POSIXTime)
+import           Ledger.Ada                        (fromValue, toValue)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
@@ -57,8 +58,13 @@ instance MonadIO m => HasUtxoData m where
         if curTime - cTime <= cacheValidityPeriod
             then return oldCache
             else do
-                utxos  <- liftIO $ mconcatMapM getUtxosAt addrs
+                utxos <- liftIO $ mconcatMapM getUtxosAt addrs
                 ChainIndexCache addrs utxos <$> currentTime
+
+getCleanUtxos :: MonadIO m => Address -> m (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+getCleanUtxos = (Map.filter (cleanValue . _ciTxOutValue . fst) <$>) . liftIO . getUtxosAt
+    where
+        cleanValue val = (toValue $ fromValue val) == val
 
 ----------------------------------- Chain index queries ---------------------------------
 
