@@ -42,6 +42,9 @@ data ChainIndexCache = ChainIndexCache {
 }
     deriving (Show, Generic, FromJSON, ToJSON)
 
+newCache :: [Address] -> ChainIndexCache
+newCache addresses = ChainIndexCache addresses Map.empty 0
+
 getFromEndpoint :: Servant.Endpoint a
 getFromEndpoint = Servant.getFromEndpointOnPort 9083
 
@@ -64,7 +67,7 @@ instance MonadIO m => HasUtxoData m where
 getCleanUtxos :: MonadIO m => Address -> m (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
 getCleanUtxos = (Map.filter (cleanValue . _ciTxOutValue . fst) <$>) . liftIO . getUtxosAt
     where
-        cleanValue val = (toValue $ fromValue val) == val
+        cleanValue val = toValue (fromValue val) == val
 
 ----------------------------------- Chain index queries ---------------------------------
 
