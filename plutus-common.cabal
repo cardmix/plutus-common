@@ -38,6 +38,7 @@ library
       Types.TxConstructor
       Utils.Address
       Utils.ByteString
+      Utils.ChainIndex
       Utils.Tx
       Utils.Passphrase
       Utils.Prelude

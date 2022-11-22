@@ -25,7 +25,6 @@ import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
 import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef (txOutRefId), POSIXTime)
-import           Ledger.Ada                        (fromValue, toValue)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
@@ -45,9 +44,6 @@ data ChainIndexCache = ChainIndexCache {
 newCache :: [Address] -> ChainIndexCache
 newCache addresses = ChainIndexCache addresses Map.empty 0
 
-getFromEndpoint :: Servant.Endpoint a
-getFromEndpoint = Servant.getFromEndpointOnPort 9083
-
 -- Cache validity is 30 seconds
 cacheValidityPeriod :: POSIXTime
 cacheValidityPeriod = 30_000
@@ -64,12 +60,10 @@ instance MonadIO m => HasUtxoData m where
                 utxos <- liftIO $ mconcatMapM getUtxosAt addrs
                 ChainIndexCache addrs utxos <$> currentTime
 
-getCleanUtxos :: MonadIO m => Address -> m (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
-getCleanUtxos = (Map.filter (cleanValue . _ciTxOutValue . fst) <$>) . liftIO . getUtxosAt
-    where
-        cleanValue val = toValue (fromValue val) == val
-
 ----------------------------------- Chain index queries ---------------------------------
+
+getFromEndpoint :: Servant.Endpoint a
+getFromEndpoint = Servant.getFromEndpointOnPort 9083
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
