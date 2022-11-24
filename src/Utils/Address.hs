@@ -33,7 +33,7 @@ bech32ToKeyHashes txt = do
     pkh  <- toPubKeyHash addr
     let skh = case stakingCredential addr of
             Just (StakingHash (PubKeyCredential spkh)) -> Just $ StakePubKeyHash spkh
-            Just StakingPtr{}                          -> Nothing -- yet?
+            Just StakingPtr{}                          -> Nothing -- no support for pointers at the moment
             _                                          -> Nothing
     pure (PaymentPubKeyHash pkh, skh)
 
@@ -56,5 +56,5 @@ bech32ToStakePubKeyHash :: Text -> Maybe StakePubKeyHash
 bech32ToStakePubKeyHash txt = do
     StakeAddress _ payCred <- either (const Nothing) Just $ deserialiseFromBech32 AsStakeAddress txt
     case payCred of
-            Shelley.ScriptHashObj _ -> Nothing
+            Shelley.ScriptHashObj _  -> Nothing
             Shelley.KeyHashObj kHash -> Just $ StakePubKeyHash $ transKeyHash kHash
