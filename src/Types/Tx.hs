@@ -10,28 +10,34 @@
 {-# LANGUAGE TypeFamilies               #-}
 
 
-module Types.TxConstructor where
+module Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
+import           Control.Monad.State              (State)
 import           Data.Map                         (Map)
 import           GHC.Generics                     (Generic)
 import           Ledger                           (ChainIndexTxOut)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
+import           Ledger.Typed.Scripts             (ValidatorTypes (..), Any)
 import           Plutus.ChainIndex                (ChainIndexTx)
 import           Plutus.V2.Ledger.Api             (POSIXTime, TxOutRef)
 import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
 
 
-data TxConstructor a i o = TxConstructor {
-    txCurrentTime        :: POSIXTime,
-    txCreator            :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
-    txConstructorLookups :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
-    txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
-}
+data TxConstructor a i o = TxConstructor
+    {
+        txCurrentTime        :: POSIXTime,
+        txCreator            :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
+        txConstructorLookups :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
+        txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
+    }
     deriving (Show, Generic, FromJSON, ToJSON)
+
+type Transaction = TxConstructor Any (RedeemerType Any) (DatumType Any)
+type TransactionBuilder a = State Transaction a
 
 mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
     TxConstructor a i o

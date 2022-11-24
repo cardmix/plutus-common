@@ -30,12 +30,13 @@ common lang
 library
     import: lang
     exposed-modules:
+      Constraints.OffChain
+      Constraints.OnChain
       IO.ChainIndex
       IO.Time
       IO.Wallet
-      Scripts.Constraints
       Scripts.OneShotCurrency
-      Types.TxConstructor
+      Types.Tx
       Utils.Address
       Utils.ByteString
       Utils.Tx
