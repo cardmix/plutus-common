@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
-module Test.ChainIndex where
+module Tests.ChainIndex where
 
 import IO.ChainIndex
 import Utils.Address
