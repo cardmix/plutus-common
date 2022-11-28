@@ -2,3 +2,5 @@ cradle:
   cabal:
     - path: "src"
       component: "plutus-common:lib:plutus-common"
+    - path: "test"
+      component: "plutus-common:test:plutus-common-test"

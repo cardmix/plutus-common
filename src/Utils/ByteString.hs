@@ -19,9 +19,12 @@ import           Prelude                           (Char, String)
 
 import           Utils.Prelude                     (drop)
 
+----------------- Conversions to BuiltinByteString type --------------------
+
 class ToBuiltinByteString a where
     toBytes :: a -> BuiltinByteString
 
+-- Does not work on-chain
 instance ToBuiltinByteString String where
     {-# INLINABLE toBytes #-}
     toBytes str = foldr (consByteString . g) emptyByteString (f str)
@@ -36,7 +39,8 @@ instance ToBuiltinByteString Bool where
 
 instance ToBuiltinByteString Integer where
     {-# INLINABLE toBytes #-}
-    toBytes = integerToByteString
+    toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
+        where (q, r) = divMod n 256
 
 instance ToBuiltinByteString [Integer] where
     {-# INLINABLE toBytes #-}
@@ -63,10 +67,7 @@ instance ToBuiltinByteString PaymentPubKeyHash where
     {-# INLINABLE toBytes #-}
     toBytes (PaymentPubKeyHash (PubKeyHash bs)) = bs
 
-{-# INLINABLE integerToByteString #-}
-integerToByteString :: Integer -> BuiltinByteString
-integerToByteString n = consByteString r $ if q > 0 then integerToByteString q else emptyByteString
-    where (q, r) = divMod n 256
+---------------- Conversions from BuiltinByteString type -------------------
 
 {-# INLINABLE byteStringToList #-}
 byteStringToList :: BuiltinByteString -> [Integer]
@@ -76,6 +77,8 @@ byteStringToList bs = indexByteString bs 0 : byteStringToList (dropByteString 1 
 {-# INLINABLE byteStringToInteger #-}
 byteStringToInteger :: BuiltinByteString -> Integer
 byteStringToInteger bs = foldr (\d n -> 256*n + d) 0 (byteStringToList bs)
+
+--------------------------- Helper functions --------------------------------
 
 charToHex :: Char -> Integer
 charToHex '0' = 0

@@ -32,7 +32,6 @@ module Scripts.OneShotCurrency (
     oneShotCurrencyMintTx
     ) where
 
-import           Control.Monad.State                    (State)
 import           Data.Aeson                             (FromJSON, ToJSON)
 import           GHC.Generics                           (Generic)
 import           Ledger.Tx                              (ChainIndexTxOut)
@@ -46,8 +45,8 @@ import qualified PlutusTx.AssocMap                      as AssocMap
 import           PlutusTx.Prelude                       hiding (Monoid (..), Semigroup (..))
 import qualified Prelude                                as Haskell
 
-import           Scripts.Constraints                    (tokensMintedTx, utxoSpentPublicKeyTx)
-import           Types.TxConstructor                    (TxConstructor)
+import           Constraints.OffChain                   (tokensMintedTx, utxoSpentPublicKeyTx)
+import           Types.Tx                               (TransactionBuilder)
 
 ---------------------------------- Types ------------------------------------
 
@@ -112,7 +111,7 @@ currencyValue :: OneShotCurrencyParams -> Value
 currencyValue cur = oneShotCurrencyValue (currencySymbol cur) cur
 
 -- Constraints that the OneShotCurrency is minted in the transaction
-oneShotCurrencyMintTx :: OneShotCurrencyParams -> State (TxConstructor a i o) (Maybe (TxOutRef, ChainIndexTxOut))
+oneShotCurrencyMintTx :: OneShotCurrencyParams -> TransactionBuilder (Maybe (TxOutRef, ChainIndexTxOut))
 oneShotCurrencyMintTx par@(OneShotCurrencyParams ref _) = do
     tokensMintedTx (oneShotCurrencyPolicy par) () (currencyValue par)
     utxoSpentPublicKeyTx (\r _ -> r == ref)

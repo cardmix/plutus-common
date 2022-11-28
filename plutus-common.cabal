@@ -5,7 +5,7 @@ version:            0.1.0.0
 
 author:             Vladimir Sinyakov
                     Grigory Petrov
-maintainer:         devteam@cardmix.io
+maintainer:         team@encoins.io
 
 -- Plutus language settings
 common lang
@@ -30,12 +30,13 @@ common lang
 library
     import: lang
     exposed-modules:
+      Constraints.OffChain
+      Constraints.OnChain
       IO.ChainIndex
       IO.Time
       IO.Wallet
-      Scripts.Constraints
       Scripts.OneShotCurrency
-      Types.TxConstructor
+      Types.Tx
       Utils.Address
       Utils.ByteString
       Utils.ChainIndex
@@ -43,9 +44,6 @@ library
       Utils.Passphrase
       Utils.Prelude
       Utils.Servant
-    other-modules:
-      Test.ChainIndex
-      Test.Wallet
     build-depends:
       base                          >= 4.9 && < 5,
       base16-bytestring                      -any,
@@ -98,5 +96,40 @@ library
       prettyprinter                          -any,
       QuickCheck                             -any,
       uuid                                   -any,
-
     hs-source-dirs: src
+
+test-suite plutus-common-test
+  Type:                 exitcode-stdio-1.0
+  Default-Language:     Haskell2010
+  Hs-Source-Dirs:       test
+  Ghc-Options:          -rtsopts
+                        -fplugin-opt PlutusTx.Plugin:defer-errors
+  Main-Is:              Main.hs
+  Other-Modules:        Tests.ChainIndex
+                        Tests.OnChain
+                        Tests.Wallet
+  Build-Depends:
+    base                                   -any,
+    aeson                                  -any,
+    bytestring                             -any,
+    cardano-addresses                      -any,
+    cardano-api                            -any,
+    cardano-wallet-core                    -any,
+    containers                             -any,
+    data-default                           -any,
+    generic-arbitrary                      -any,
+    plutus-common                          -any,
+    plutus-contract                        -any,
+    plutus-core                            -any,
+    plutus-chain-index                     -any,
+    plutus-chain-index-core                -any,
+    plutus-tx-plugin                       -any,
+    plutus-tx                              -any,
+    plutus-ledger                          -any,
+    plutus-ledger-api                      -any,
+    plutus-ledger-constraints              -any,
+    plutus-script-utils                    -any,
+    plutus-use-cases                       -any,
+    QuickCheck                             -any,
+    random                                 -any,
+    text                                   -any

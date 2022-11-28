@@ -16,7 +16,7 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE TupleSections              #-}
 
-module Test.OnChain where
+module Tests.OnChain where
 
 import           Plutus.Script.Utils.V2.Typed.Scripts (ValidatorTypes (..), TypedValidator,
                                                         mkTypedValidator, mkUntypedValidator, mkUntypedMintingPolicy)
@@ -25,7 +25,7 @@ import           PlutusTx                             (compile)
 import           PlutusTx.AssocMap                    (fromList)
 import           PlutusTx.Prelude                     (BuiltinByteString, Bool (..), ($), map)
 
-import           Scripts.Constraints                  (tokensMinted)
+import           Constraints.OnChain                  (tokensMinted)
 
 ------------------------------------- Test Minting Policy --------------------------------------
 

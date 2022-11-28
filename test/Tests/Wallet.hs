@@ -12,7 +12,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Wallet where
+module Tests.Wallet where
 import           Cardano.Api.Shelley                 (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
 import           Cardano.Mnemonic                    (MkSomeMnemonic(..))
 import           Cardano.Wallet.Primitive.Passphrase (Passphrase(..))

@@ -34,6 +34,8 @@ import           Prelude                           (Show(..), IO, (<$>), (<>), t
 import           IO.Time                           (currentTime)
 import qualified Utils.Servant                     as Servant
 
+----------------------------------- Chain index cache -----------------------------------
+
 data ChainIndexCache = ChainIndexCache {
     cacheAddresses  :: [Address],
     cacheData       :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
