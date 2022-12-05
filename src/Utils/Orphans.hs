@@ -25,7 +25,7 @@ import           Utils.ByteString                  (ToBuiltinByteString(..))
 instance Arbitrary TxOutRef where
     arbitrary = do
         bs <- arbitrary
-        TxOutRef (TxId $ toBytes $ modulo bs (2 ^ (256 :: Integer) - 1)) <$> arbitrary
+        TxOutRef (TxId $ toBytes $ modulo bs (2 ^ (256 :: Integer) - 1)) . max 0 <$> arbitrary
 
 instance Arbitrary PubKeyHash where
     arbitrary = do
