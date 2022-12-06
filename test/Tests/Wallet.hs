@@ -13,6 +13,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Tests.Wallet where
+
 import           Cardano.Api.Shelley                 (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
 import           Cardano.Mnemonic                    (MkSomeMnemonic(..))
 import           Cardano.Wallet.Primitive.Passphrase (Passphrase(..))
@@ -26,9 +27,9 @@ import           Data.String                         (IsString(fromString))
 import           Data.Text                           (Text)
 import qualified Data.Text                           as T
 import           IO.Wallet                           (HasWallet(..), getWalletTxOutRefs, genWalletId, restoreWalletFromFile, walletIdFromFile)
-import           Ledger                              (Params(..), TxOutRef)
+import           Ledger                              (Params(..), TxOutRef, stakingCredential)
 import           Prelude                             hiding (readFile)
-import           Utils.Address                       (bech32ToKeyHashes)
+import           Utils.Address                       (bech32ToKeyHashes, bech32ToAddress)
 
 instance HasWallet IO where
     getRestoreWallet = restoreWalletFromFile "testnet/wallet.json"
@@ -38,11 +39,12 @@ daedalusAddress = "addr_test1qpmv0wkr6z9sdqveecpuywrwcxyueft0wgle85cs9fhsvtgnt9a
 
 test :: FilePath -> IO [TxOutRef]
 test file = do
-  pp <- fromJust . decode <$> readFile file :: IO ProtocolParameters
-  let (pkh, skh) = fromJust $ bech32ToKeyHashes daedalusAddress
+  pp <- fromJust . decode <$> readFile file
+  let pkh = fromJust $ fst <$> bech32ToKeyHashes daedalusAddress
+      sc = stakingCredential $ fromJust $ bech32ToAddress daedalusAddress
       networkId = Testnet $ NetworkMagic 1097911063
-      ledgerParams = Params def pp networkId
-  getWalletTxOutRefs ledgerParams pkh skh 1
+      ledgerParams = Params def (emulatorPParams pp) networkId
+  getWalletTxOutRefs ledgerParams pkh sc 1
 
 testWalletGen :: Bool
 testWalletGen = "2233e2fc50a0d880e187f4a87de74234e960bd95" == show

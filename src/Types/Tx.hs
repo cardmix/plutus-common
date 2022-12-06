@@ -16,7 +16,7 @@ import           Cardano.Api                      (FromJSON, ToJSON)
 import           Control.Monad.State              (State)
 import           Data.Map                         (Map)
 import           GHC.Generics                     (Generic)
-import           Ledger                           (ChainIndexTxOut)
+import           Ledger                           (DecoratedTxOut)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
@@ -31,7 +31,7 @@ data TxConstructor a i o = TxConstructor
     {
         txCurrentTime        :: POSIXTime,
         txCreator            :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
-        txConstructorLookups :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
+        txConstructorLookups :: Map TxOutRef (DecoratedTxOut, ChainIndexTx),
         txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
     }
     deriving (Show, Generic, FromJSON, ToJSON)
@@ -39,7 +39,7 @@ data TxConstructor a i o = TxConstructor
 type Transaction = TxConstructor Any (RedeemerType Any) (DatumType Any)
 type TransactionBuilder a = State Transaction a
 
-mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> Map TxOutRef (ChainIndexTxOut, ChainIndexTx) ->
+mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> Map TxOutRef (DecoratedTxOut, ChainIndexTx) ->
     TxConstructor a i o
 mkTxConstructor creator ct lookups = TxConstructor ct creator lookups $ Just (mempty, mempty)
 

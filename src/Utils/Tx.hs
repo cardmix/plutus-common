@@ -49,6 +49,4 @@ apiSerializedTxToCardanoTx = fmap CardanoApiTx . toSomeTx . toAnyEraTx
 cardanoTxToSealedTx :: CardanoTx -> Maybe SealedTx
 cardanoTxToSealedTx = \case
     (CardanoApiTx (SomeTx tx _)) -> Just $ sealedTxFromCardano' tx
-    (Both _ (SomeTx tx _))       -> Just $ sealedTxFromCardano' tx
     _                            -> Nothing
-
