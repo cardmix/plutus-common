@@ -36,6 +36,7 @@ import           Data.Aeson                                         (FromJSON(..
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
 import           Data.Map                                           (keys)
+import           Data.Maybe                                         (mapMaybe)
 import           Data.String                                        (IsString(..))
 import           Data.Text                                          (Text)
 import qualified Data.Text                                          as T
@@ -131,8 +132,11 @@ getWalletKeyHashes = do
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
 getWalletFromId = getFromEndpoint . Client.getWallet Client.walletClient . ApiT
 
-ownAddresses :: HasWallet m => m [Text]
-ownAddresses = do
+ownAddresses :: HasWallet m => m [Address]
+ownAddresses = mapMaybe bech32ToAddress <$> ownAddressesBech32
+
+ownAddressesBech32 :: HasWallet m => m [Text]
+ownAddressesBech32 = do
     walletId <- getWalletId
     as <- getFromEndpoint $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
