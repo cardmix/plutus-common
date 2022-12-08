@@ -40,6 +40,7 @@ library
       Utils.Address
       Utils.ByteString
       Utils.ChainIndex
+      Utils.Orphans
       Utils.Tx
       Utils.Passphrase
       Utils.Prelude
