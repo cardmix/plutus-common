@@ -79,7 +79,7 @@ testSum addr = do
     print a
     citxouts <- map (fst . snd) . Map.toList <$> getUtxosAt a
     putStrLn "\nSUM:"
-    print $ mconcat $ map _ciTxOutValue citxouts
+    print $ mconcat $ map _decoratedTxOutValue citxouts
 
 -- Shows 2 less ada (514.712073 instead of 516.056871), but all tokens are shown correctly
 testSum1 :: IO ()

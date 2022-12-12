@@ -24,7 +24,7 @@ import           Data.Default                      (Default (def))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
-import           Ledger                            (Address, ChainIndexTxOut(..), TxOutRef (txOutRefId), POSIXTime)
+import           Ledger                            (Address, DecoratedTxOut, TxOutRef (txOutRefId), POSIXTime)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
@@ -38,7 +38,7 @@ import qualified Utils.Servant                     as Servant
 
 data ChainIndexCache = ChainIndexCache {
     cacheAddresses  :: [Address],
-    cacheData       :: Map TxOutRef (ChainIndexTxOut, ChainIndexTx),
+    cacheData       :: Map TxOutRef (DecoratedTxOut, ChainIndexTx),
     cacheTime       :: POSIXTime
 }
     deriving (Show, Generic, FromJSON, ToJSON)
@@ -68,7 +68,7 @@ getFromEndpoint :: Servant.Endpoint a
 getFromEndpoint = Servant.getFromEndpointOnPort 9083
 
 -- Get all utxos at a given address
-getUtxosAt :: Address -> IO (Map TxOutRef (ChainIndexTxOut, ChainIndexTx))
+getUtxosAt :: Address -> IO (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
 getUtxosAt addr = do
   refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
   let txIds = map (txOutRefId . fst) refTxOuts
@@ -98,7 +98,7 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
             newAcc <- f acc page'
             go newAcc (nextPageQuery page')
 
-unspentTxOutFromRef :: TxOutRef -> IO ChainIndexTxOut
+unspentTxOutFromRef :: TxOutRef -> IO DecoratedTxOut
 unspentTxOutFromRef = getFromEndpoint . Client.getUnspentTxOut
 
 -- Get the unspent transaction output references at an address.

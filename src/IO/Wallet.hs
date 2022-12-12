@@ -36,15 +36,16 @@ import           Data.Aeson                                         (FromJSON(..
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
 import           Data.Map                                           (keys)
+import           Data.Maybe                                         (mapMaybe)
 import           Data.String                                        (IsString(..))
 import           Data.Text                                          (Text)
 import qualified Data.Text                                          as T
 import           Data.Text.Class                                    (FromText(fromText))
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
-import           Ledger                                             (Address, CardanoTx (..), Params (..), PaymentPubKeyHash, StakePubKeyHash, TxOutRef)
+import           Ledger                                             (Address, CardanoTx (..), Params (..), PaymentPubKeyHash, StakePubKeyHash, TxOutRef, StakingCredential)
 import           Ledger.Ada                                         (lovelaceValueOf)
-import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mkTx, mustPayToPubKeyAddress, mustPayToPubKey)
+import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
@@ -131,8 +132,11 @@ getWalletKeyHashes = do
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
 getWalletFromId = getFromEndpoint . Client.getWallet Client.walletClient . ApiT
 
-ownAddresses :: HasWallet m => m [Text]
-ownAddresses = do
+ownAddresses :: HasWallet m => m [Address]
+ownAddresses = mapMaybe bech32ToAddress <$> ownAddressesBech32
+
+ownAddressesBech32 :: HasWallet m => m [Text]
+ownAddressesBech32 = do
     walletId <- getWalletId
     as <- getFromEndpoint $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
@@ -165,7 +169,7 @@ balanceTx params lookups cons = do
         _        -> error "Unable to convert ApiSerialisedTransaction to a CardanoTx.") . apiSerializedTxToCardanoTx
     where
         -- tx to pass to the wallet as JSON
-        etx = fromEither (error . show) $ export params $ fromEither (error . show) $ mkTx lookups cons
+        etx = fromEither (error . show) $ export params $ fromEither (error . show) $ mkTxWithParams params lookups cons
         balance walletId = getFromEndpoint $ Client.balanceTransaction Client.transactionClient
             (ApiT walletId)
             (toJSON etx)
@@ -203,8 +207,8 @@ awaitTxConfirmed ctx = go
         mkHash = fromEither (error . show) . fromText . T.pack . show  . getCardanoTxId
 
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
-getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakePubKeyHash -> Integer -> m [TxOutRef]
-getWalletTxOutRefs params pkh mbSkh n = do
+getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Integer -> m [TxOutRef]
+getWalletTxOutRefs params pkh mbSkc n = do
     liftIO $ putStrLn "Balancing..."
     balancedTx <- balanceTx params lookups cons
     liftIO $ print balancedTx
@@ -216,11 +220,10 @@ getWalletTxOutRefs params pkh mbSkh n = do
     let refs = case signedTx of
             EmulatorTx _    -> error "Can not get TxOutRef's from EmulatorTx."
             CardanoApiTx tx -> keys $ unspentOutputsTx tx
-            Both _ tx       -> keys $ unspentOutputsTx tx
     liftIO $ putStrLn "Submitted!"
     return refs
     where
         lookups = mempty :: ScriptLookups Void
-        cons    = case mbSkh of
-            Just skh -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skh $ lovelaceValueOf 10_000_000
+        cons    = case mbSkc of
+            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skc $ lovelaceValueOf 10_000_000
             Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
