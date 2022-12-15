@@ -24,14 +24,6 @@ import           Utils.Prelude                     (drop)
 class ToBuiltinByteString a where
     toBytes :: a -> BuiltinByteString
 
--- Does not work on-chain
-instance ToBuiltinByteString String where
-    {-# INLINABLE toBytes #-}
-    toBytes str = foldr (consByteString . g) emptyByteString (f str)
-        where
-            f s = if length s > 1 then take 2 s : f (drop 2 s) else []
-            g s = charToHex (head s) * 16 + charToHex (s !! 1)
-
 instance ToBuiltinByteString Bool where
     {-# INLINABLE toBytes #-}
     toBytes False = consByteString 0 emptyByteString
@@ -42,7 +34,11 @@ instance ToBuiltinByteString Integer where
     toBytes n = consByteString r $ if q > 0 then toBytes q else emptyByteString
         where (q, r) = divMod n 256
 
-instance ToBuiltinByteString [Integer] where
+instance (ToBuiltinByteString a, ToBuiltinByteString b) => ToBuiltinByteString (a, b) where
+    {-# INLINABLE toBytes #-}
+    toBytes (x, y) = toBytes x `appendByteString` toBytes y
+
+instance ToBuiltinByteString a => ToBuiltinByteString [a] where
     {-# INLINABLE toBytes #-}
     toBytes = foldr (appendByteString . toBytes) emptyByteString
 
@@ -78,7 +74,13 @@ byteStringToList bs = indexByteString bs 0 : byteStringToList (dropByteString 1 
 byteStringToInteger :: BuiltinByteString -> Integer
 byteStringToInteger bs = foldr (\d n -> 256*n + d) 0 (byteStringToList bs)
 
---------------------------- Helper functions --------------------------------
+-------------------- Conversions with strings and chars --------------------
+
+stringToBytes :: String -> BuiltinByteString
+stringToBytes str = foldr (consByteString . g) emptyByteString (f str)
+    where
+        f s = if length s > 1 then take 2 s : f (drop 2 s) else []
+        g s = charToHex (head s) * 16 + charToHex (s !! 1)
 
 charToHex :: Char -> Integer
 charToHex '0' = 0
