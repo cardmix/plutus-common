@@ -24,6 +24,10 @@ import           Utils.Prelude                     (drop)
 class ToBuiltinByteString a where
     toBytes :: a -> BuiltinByteString
 
+instance ToBuiltinByteString BuiltinByteString where
+    {-# INLINABLE toBytes #-}
+    toBytes = id
+
 instance ToBuiltinByteString Bool where
     {-# INLINABLE toBytes #-}
     toBytes False = consByteString 0 emptyByteString
@@ -37,6 +41,14 @@ instance ToBuiltinByteString Integer where
 instance (ToBuiltinByteString a, ToBuiltinByteString b) => ToBuiltinByteString (a, b) where
     {-# INLINABLE toBytes #-}
     toBytes (x, y) = toBytes x `appendByteString` toBytes y
+
+instance (ToBuiltinByteString a, ToBuiltinByteString b, ToBuiltinByteString c) => ToBuiltinByteString (a, b, c) where
+    {-# INLINABLE toBytes #-}
+    toBytes (x, y, z) = toBytes x `appendByteString` toBytes y `appendByteString` toBytes z
+
+instance (ToBuiltinByteString a, ToBuiltinByteString b, ToBuiltinByteString c, ToBuiltinByteString d) => ToBuiltinByteString (a, b, c, d) where
+    {-# INLINABLE toBytes #-}
+    toBytes (x, y, z, w) = toBytes x `appendByteString` toBytes y `appendByteString` toBytes z `appendByteString` toBytes w
 
 instance ToBuiltinByteString a => ToBuiltinByteString [a] where
     {-# INLINABLE toBytes #-}
