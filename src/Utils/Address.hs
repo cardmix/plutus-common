@@ -26,16 +26,24 @@ import           Ledger.Tx.CardanoAPI            (fromCardanoAddress)
 import           Plutus.V1.Ledger.Credential     (Credential(..), StakingCredential(..))
 import           PlutusTx.Prelude                hiding (asum, error)
 
--- Extract key hashes from bech32 Shelley/Byron address
-bech32ToKeyHashes :: Text -> Maybe (PaymentPubKeyHash, Maybe StakePubKeyHash)
-bech32ToKeyHashes txt = do
-    addr <- bech32ToAddress txt
+---------------------------- Address to keyhashes conversions ----------------------------------
+
+addressToKeyHashes :: Address -> Maybe (PaymentPubKeyHash, Maybe StakePubKeyHash)
+addressToKeyHashes addr = do
     pkh  <- toPubKeyHash addr
     let skh = case stakingCredential addr of
             Just (StakingHash (PubKeyCredential spkh)) -> Just $ StakePubKeyHash spkh
             Just StakingPtr{}                          -> Nothing -- no support for pointers at the moment
             _                                          -> Nothing
     pure (PaymentPubKeyHash pkh, skh)
+
+----------------------------------- Bech32 conversions -----------------------------------------
+
+-- Extract key hashes from bech32 Shelley/Byron address
+bech32ToKeyHashes :: Text -> Maybe (PaymentPubKeyHash, Maybe StakePubKeyHash)
+bech32ToKeyHashes txt = do
+    addr <- bech32ToAddress txt
+    addressToKeyHashes addr
 
 -- Convert bech32 Shelley/Byron address to Plutus Address
 bech32ToAddress :: Text -> Maybe Address
