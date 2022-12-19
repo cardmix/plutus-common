@@ -23,6 +23,11 @@ packages: ./.
 
 source-repository-package
   type: git
+  location: https://github.com/encryptedcoins/plutus-tx-extra.git
+  tag: 8e9ab9d1baa91a97cbd9395dda4b32fe0ac1f65f
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/plutus-apps
   tag: 7952b9d30d15779a7fd8103bdbc9612d5df18ec2
   subdir: 

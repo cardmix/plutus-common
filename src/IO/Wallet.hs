@@ -54,9 +54,10 @@ import           PlutusTx.IsData                                    (ToData, Fro
 import           Prelude                                            hiding (replicate)
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
 import           Utils.Passphrase                                   (convertPassphrase)
-import           Utils.Prelude                                      (replicate)
 import qualified Utils.Servant                                      as Servant
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
+
+import           PlutusTx.Extra.Prelude                             (replicate)
 
 ------------------------------------------- Restore-wallet -------------------------------------------
 

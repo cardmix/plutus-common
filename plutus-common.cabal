@@ -38,12 +38,10 @@ library
       Scripts.OneShotCurrency
       Types.Tx
       Utils.Address
-      Utils.ByteString
       Utils.ChainIndex
       Utils.Orphans
       Utils.Tx
       Utils.Passphrase
-      Utils.Prelude
       Utils.Servant
     build-depends:
       base                          >= 4.9 && < 5,
@@ -78,6 +76,7 @@ library
       plutus-pab                             -any,
       plutus-tx-plugin                       -any,
       plutus-tx                              -any,
+      plutus-tx-extra                        -any,
       plutus-ledger                          -any,
       plutus-ledger-api                      -any,
       plutus-ledger-constraints              -any,
@@ -127,6 +126,7 @@ test-suite plutus-common-test
     plutus-chain-index-core                -any,
     plutus-tx-plugin                       -any,
     plutus-tx                              -any,
+    plutus-tx-extra                        -any,
     plutus-ledger                          -any,
     plutus-ledger-api                      -any,
     plutus-ledger-constraints              -any,
