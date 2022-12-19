@@ -58,6 +58,7 @@ library
       containers                             -any,
       data-default                           -any,
       directory                              -any,
+      encoins-bulletproofs                   -any,
       extra                                  -any,
       file-embed                             -any,
       freer-extras                           -any,

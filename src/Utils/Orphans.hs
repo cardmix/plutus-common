@@ -7,9 +7,11 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-{-# OPTIONS_GHC -Wno-orphans            #-}
+{-# OPTIONS_GHC -Wno-orphans               #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Utils.Orphans where
 
@@ -17,10 +19,15 @@ import           Ledger                            (PubKeyHash(..), StakePubKeyH
 import           Ledger.Address                    (PaymentPubKeyHash (..), StakePubKeyHash (..), Address (..))
 import           Plutus.V2.Ledger.Api              (Credential(..), StakingCredential (..))
 import           Ledger.Tx                         (TxOutRef (..), TxId (..))
+import           PlutusTx                          (unstableMakeIsData)
 import           PlutusTx.Prelude                  hiding ((<$>), (<>))
 import           Prelude                           ((<$>), (^))
 import           Test.QuickCheck                   (Arbitrary (..))
 
+import           ENCOINS.BaseTypes
+import           ENCOINS.Bulletproofs.Types
+import           ENCOINS.Crypto.Field
+import           ENCOINS.Crypto.Curve
 import           PlutusTx.Extra.ByteString         (ToBuiltinByteString(..))
 
 ------------------------------------- Arbitrary --------------------------------------
@@ -63,3 +70,16 @@ instance ToBuiltinByteString PubKeyHash where
 instance ToBuiltinByteString PaymentPubKeyHash where
     {-# INLINABLE toBytes #-}
     toBytes (PaymentPubKeyHash (PubKeyHash bs)) = bs
+
+--------------------------------------- FromData ---------------------------------------
+
+unstableMakeIsData ''Field
+unstableMakeIsData ''BLS12381
+unstableMakeIsData ''BLS12381Field
+unstableMakeIsData ''GroupElement
+unstableMakeIsData ''MintingPolarity
+unstableMakeIsData ''BulletproofSetup
+unstableMakeIsData ''Secret
+unstableMakeIsData ''Randomness
+unstableMakeIsData ''Input
+unstableMakeIsData ''Proof
