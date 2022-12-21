@@ -1,6 +1,6 @@
 cabal-version:      3.0
 
-name:               plutus-common
+name:               plutus-apps-extra
 version:            0.1.0.0
 
 author:             Vladimir Sinyakov
