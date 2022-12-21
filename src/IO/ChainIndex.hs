@@ -21,6 +21,7 @@ import           Control.Applicative               (Applicative(..))
 import           Control.Monad.Extra               (mconcatMapM)
 import           Control.Monad.IO.Class            (MonadIO(..))
 import           Data.Default                      (Default (def))
+import           Data.Functor                      ((<&>))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
@@ -28,10 +29,11 @@ import           Ledger                            (Address, DecoratedTxOut, TxO
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
-import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap)
+import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
-import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap)
+import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
 import           IO.Time                           (currentTime)
+import           IO.Wallet                         (HasWallet, ownAddresses)
 import qualified Utils.Servant                     as Servant
 
 ----------------------------------- Chain index cache -----------------------------------
@@ -63,6 +65,10 @@ instance MonadIO m => HasUtxoData m where
                 ChainIndexCache addrs utxos <$> currentTime
 
 ----------------------------------- Chain index queries ---------------------------------
+
+-- Get all utxos at a wallet
+getWalletUtxos :: HasWallet m => m (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
+getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
 getFromEndpoint :: Servant.Endpoint a
 getFromEndpoint = Servant.getFromEndpointOnPort 9083
