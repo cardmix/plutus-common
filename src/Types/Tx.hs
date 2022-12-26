@@ -21,7 +21,6 @@ import           Ledger.Address                   (PaymentPubKeyHash, StakePubKe
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Ledger.Typed.Scripts             (ValidatorTypes (..), Any)
-import           Plutus.ChainIndex                (ChainIndexTx)
 import           Plutus.V2.Ledger.Api             (POSIXTime, TxOutRef)
 import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
@@ -31,7 +30,7 @@ data TxConstructor a i o = TxConstructor
     {
         txCurrentTime        :: POSIXTime,
         txCreator            :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
-        txConstructorLookups :: Map TxOutRef (DecoratedTxOut, ChainIndexTx),
+        txConstructorLookups :: Map TxOutRef DecoratedTxOut,
         txConstructorResult  :: Maybe (ScriptLookups a, TxConstraints i o)
     }
     deriving (Show, Generic, FromJSON, ToJSON)
@@ -39,7 +38,7 @@ data TxConstructor a i o = TxConstructor
 type Transaction = TxConstructor Any (RedeemerType Any) (DatumType Any)
 type TransactionBuilder a = State Transaction a
 
-mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> Map TxOutRef (DecoratedTxOut, ChainIndexTx) ->
+mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> Map TxOutRef DecoratedTxOut ->
     TxConstructor a i o
 mkTxConstructor creator ct lookups = TxConstructor ct creator lookups $ Just (mempty, mempty)
 

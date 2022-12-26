@@ -35,16 +35,16 @@ utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx
 utxoSpentPublicKeyTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentPublicKeyTx' f = do
     constr <- get
-    let lookups = txConstructorLookups constr
+    let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos   = Data.Map.filterWithKey f $ Data.Map.map fst lookups
-    if Data.Map.null utxos
+        utxos'  = Data.Map.filterWithKey f utxos
+    if Data.Map.null utxos'
         then return Nothing
         else do
-            let utxo = head $ Data.Map.toList utxos
+            let utxo = head $ Data.Map.toList utxos'
                 ref  = fst utxo
             put constr { txConstructorResult = res <> Just (unspentOutputs (Data.Map.fromList [utxo]), mustSpendPubKeyOutput ref),
-                txConstructorLookups = Data.Map.delete ref lookups }
+                txConstructorLookups = Data.Map.delete ref utxos }
             return $ Just utxo
 
 utxoSpentScriptTx :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) -> (TxOutRef -> DecoratedTxOut -> Validator) ->
@@ -55,17 +55,17 @@ utxoSpentScriptTx' :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) ->
     (TxOutRef -> DecoratedTxOut -> redeemer) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentScriptTx' f scriptVal red = do
     constr <- get
-    let lookups = txConstructorLookups constr
+    let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos   = Data.Map.filterWithKey f $ Data.Map.map fst lookups
-    if Data.Map.null utxos
+        utxos'  = Data.Map.filterWithKey f utxos
+    if Data.Map.null utxos'
         then return Nothing
         else do
-            let utxo = head $ Data.Map.toList utxos
+            let utxo = head $ Data.Map.toList utxos'
                 ref  = fst utxo
             put constr { txConstructorResult = res <> Just (unspentOutputs (Data.Map.fromList [utxo]) <> plutusV2OtherScript (uncurry scriptVal utxo),
                 mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)),
-                txConstructorLookups = Data.Map.delete ref lookups }
+                txConstructorLookups = Data.Map.delete ref utxos }
             return $ Just utxo
 
 utxoReferencedTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
@@ -74,16 +74,16 @@ utxoReferencedTx f = utxoReferencedTx' f >>= failTx
 utxoReferencedTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
 utxoReferencedTx' f = do
     constr <- get
-    let lookups = txConstructorLookups constr
+    let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos   = Data.Map.filterWithKey f $ Data.Map.map fst lookups
-    if Data.Map.null utxos
+        utxos'  = Data.Map.filterWithKey f utxos
+    if Data.Map.null utxos'
         then return Nothing
         else do
-            let utxo = head $ Data.Map.toList utxos
+            let utxo = head $ Data.Map.toList utxos'
                 ref  = fst utxo
             put constr { txConstructorResult = res <> Just (unspentOutputs (Data.Map.fromList [utxo]), mustReferenceOutput ref),
-                txConstructorLookups = Data.Map.delete ref lookups }
+                txConstructorLookups = Data.Map.delete ref utxos }
             return $ Just utxo
 
 utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakingCredential -> Value -> Maybe datum -> State (TxConstructor a i o) ()

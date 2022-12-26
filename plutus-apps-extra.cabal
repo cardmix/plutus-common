@@ -32,6 +32,7 @@ library
     exposed-modules:
       Constraints.OffChain
       Constraints.OnChain
+      Constraints.Prebalance
       IO.ChainIndex
       IO.Time
       IO.Wallet
@@ -58,6 +59,7 @@ library
       containers                             -any,
       data-default                           -any,
       directory                              -any,
+      either                                 -any,
       encoins-bulletproofs                   -any,
       extra                                  -any,
       file-embed                             -any,
@@ -99,7 +101,7 @@ library
       uuid                                   -any,
     hs-source-dirs: src
 
-test-suite plutus-common-test
+test-suite plutus-apps-extra-test
   Type:                 exitcode-stdio-1.0
   Default-Language:     Haskell2010
   Hs-Source-Dirs:       test
@@ -120,7 +122,7 @@ test-suite plutus-common-test
     containers                             -any,
     data-default                           -any,
     generic-arbitrary                      -any,
-    plutus-common                          -any,
+    plutus-apps-extra                      -any,
     plutus-contract                        -any,
     plutus-core                            -any,
     plutus-chain-index                     -any,

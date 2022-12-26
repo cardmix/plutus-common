@@ -77,7 +77,7 @@ testSum addr = do
     let Just a = bech32ToAddress addr
     putStrLn "\nADDR:"
     print a
-    citxouts <- map (fst . snd) . Map.toList <$> getUtxosAt a
+    citxouts <- map snd . Map.toList <$> getUtxosAt a
     putStrLn "\nSUM:"
     print $ mconcat $ map _decoratedTxOutValue citxouts
 
