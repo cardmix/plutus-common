@@ -67,7 +67,7 @@ instance MonadIO m => HasUtxoData m where
 ----------------------------------- Chain index queries ---------------------------------
 
 -- Get all utxos at a wallet
-getWalletUtxos :: HasWallet m => m (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
+getWalletUtxos :: HasWallet m => m (Map TxOutRef DecoratedTxOut)
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
 getFromEndpoint :: Servant.Endpoint a
