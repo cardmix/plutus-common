@@ -21,7 +21,7 @@ import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), 
 import           Prelude                          (Show)
 
 import           Constraints.OffChain             (utxoSpentPublicKeyTx, utxoProducedPublicKeyTx, failTx)
-import           Types.Tx                         (TransactionBuilder, TxConstructorError (..))
+import           Types.Tx                         (TransactionBuilder)
 
 data PrebalanceConstraints = PrebalanceConstraints
     {
@@ -34,7 +34,7 @@ data PrebalanceConstraints = PrebalanceConstraints
 
 prebalanceTx :: PrebalanceConstraints -> Data.Map.Map TxOutRef DecoratedTxOut -> Value -> TransactionBuilder (Maybe ())
 prebalanceTx cons extUtxos maxVal = prebalanceTx' cons extUtxos maxVal >>=
-    failTx (TxConstructorError "prebalanceTx" "Cannot satisfy balancing constraints")
+    failTx "prebalanceTx" "Cannot satisfy balancing constraints"
 
 prebalanceTx' :: PrebalanceConstraints ->
                 -- external wallet UTXOs that can be used for balancing
@@ -55,7 +55,7 @@ prebalanceTx' (PrebalanceConstraints n k m v) extUtxos maxVal = do
                     let addr      = _decoratedTxOutAddress $ snd $ head lst
                         valChange = listValue lst - maxVal
                     mapM_ (\(ref, _) -> utxoSpentPublicKeyTx (\r _ -> r == ref)) lst
-                    fromMaybe (failTx (TxConstructorError "prebalanceTx" "External utxos contain a script utxo") Nothing $> ()) $ do
+                    fromMaybe (failTx "prebalanceTx" "External utxos contain a script utxo" Nothing $> ()) $ do
                         pkh <- toPubKeyHash addr
                         return $ utxoProducedPublicKeyTx (PaymentPubKeyHash pkh) (stakingCredential addr) valChange (Nothing :: Maybe ())
                     return $ Just ()
