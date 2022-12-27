@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -19,18 +20,19 @@ import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2Minti
 import           Plutus.V2.Ledger.Api
 import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mempty)
 import           Prelude                          ((<>), mempty)
-import           Types.Tx                         (TxConstructor (..))
+import           Types.Tx                         (TxConstructor (..), TxConstructorError (TxConstructorError))
 
-failTx :: Maybe res -> State (TxConstructor a i o) (Maybe res)
-failTx r = if isJust r
+failTx :: TxConstructorError -> Maybe res -> State (TxConstructor a i o) (Maybe res)
+failTx e r = if isJust r
     then return r
     else do
         constr <- get
-        put constr { txConstructorResult = Nothing }
+        let errorList = txConstructorErrors constr
+        put constr { txConstructorErrors = e : errorList, txConstructorResult = Nothing }
         return r
 
 utxoSpentPublicKeyTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
-utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx
+utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx (TxConstructorError "utxoSpentPublicKeyTx" "No matching utxos found")
 
 utxoSpentPublicKeyTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentPublicKeyTx' f = do
@@ -49,7 +51,7 @@ utxoSpentPublicKeyTx' f = do
 
 utxoSpentScriptTx :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) -> (TxOutRef -> DecoratedTxOut -> Validator) ->
     (TxOutRef -> DecoratedTxOut -> redeemer) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
-utxoSpentScriptTx f scriptVal red = utxoSpentScriptTx' f scriptVal red >>= failTx
+utxoSpentScriptTx f scriptVal red = utxoSpentScriptTx' f scriptVal red >>= failTx (TxConstructorError "utxoSpentScriptTx" "No matching utxos found")
 
 utxoSpentScriptTx' :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) -> (TxOutRef -> DecoratedTxOut -> Validator) ->
     (TxOutRef -> DecoratedTxOut -> redeemer) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
@@ -69,7 +71,7 @@ utxoSpentScriptTx' f scriptVal red = do
             return $ Just utxo
 
 utxoReferencedTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
-utxoReferencedTx f = utxoReferencedTx' f >>= failTx
+utxoReferencedTx f = utxoReferencedTx' f >>= failTx (TxConstructorError "utxoReferencedTx" "No matching utxos found")
 
 utxoReferencedTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
 utxoReferencedTx' f = do
@@ -120,7 +122,9 @@ validatedInIntervalTx startTime endTime = do
         cond = startTime <= ct &&  ct <= endTime
     if cond
         then put constr { txConstructorResult = res <> Just (mempty, mustValidateIn $ interval startTime endTime) }
-        else put constr { txConstructorResult = Nothing }
+        else do
+            _ <- failTx (TxConstructorError "validatedInIntervalTx" "Current time is not in the interval") Nothing
+            return ()
 
 postValidatorTx :: ToData datum => Address -> Versioned Validator -> Maybe datum -> Value -> State (TxConstructor a i o) ()
 postValidatorTx addr vld dat val = do
