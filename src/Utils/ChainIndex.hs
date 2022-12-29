@@ -1,8 +1,10 @@
 module Utils.ChainIndex where
 
-import qualified Data.Map as Map
+import qualified Data.Map          as Map
 import           Ledger            (TxOutRef(..), DecoratedTxOut(..))
-import           Ledger.Ada        (fromValue, toValue)
+import           Ledger.Value      (adaOnlyValue)
 
-filterCleanUtxos :: Map.Map TxOutRef DecoratedTxOut -> Map.Map TxOutRef DecoratedTxOut
-filterCleanUtxos = Map.filter $ (\v -> toValue (fromValue v) == v) . _decoratedTxOutValue
+type MapUTXO = Map.Map TxOutRef DecoratedTxOut
+
+filterCleanUtxos :: MapUTXO -> MapUTXO
+filterCleanUtxos = Map.filter $ (\v -> adaOnlyValue v == v) . _decoratedTxOutValue
