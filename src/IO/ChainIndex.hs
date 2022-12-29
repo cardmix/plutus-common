@@ -25,7 +25,8 @@ import           Data.Functor                      ((<&>))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
-import           Ledger                            (Address, DecoratedTxOut, TxOutRef (txOutRefId), POSIXTime)
+import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (txOutRefId), POSIXTime, Ada)
+import           Ledger.Ada                        (fromValue)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
@@ -66,6 +67,10 @@ instance MonadIO m => HasUtxoData m where
                 ChainIndexCache addrs utxos <$> currentTime
 
 ----------------------------------- Chain index queries ---------------------------------
+
+-- Get all ada at a wallet
+getWalletAda :: HasWallet m => m Ada 
+getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
 
 -- Get all utxos at a wallet
 getWalletUtxos :: HasWallet m => m MapUTXO
