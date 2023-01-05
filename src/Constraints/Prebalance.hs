@@ -22,6 +22,7 @@ import           Prelude                          (Show)
 
 import           Constraints.OffChain             (utxoSpentPublicKeyTx, utxoProducedPublicKeyTx, failTx)
 import           Types.Tx                         (TransactionBuilder)
+import           Utils.ChainIndex                 (MapUTXO)
 
 data PrebalanceConstraints = PrebalanceConstraints
     {
@@ -32,13 +33,13 @@ data PrebalanceConstraints = PrebalanceConstraints
     }
     deriving (Show)
 
-prebalanceTx :: PrebalanceConstraints -> Data.Map.Map TxOutRef DecoratedTxOut -> Value -> TransactionBuilder (Maybe ())
+prebalanceTx :: PrebalanceConstraints -> MapUTXO -> Value -> TransactionBuilder (Maybe ())
 prebalanceTx cons extUtxos maxVal = prebalanceTx' cons extUtxos maxVal >>=
     failTx "prebalanceTx" "Cannot satisfy balancing constraints"
 
 prebalanceTx' :: PrebalanceConstraints ->
                 -- external wallet UTXOs that can be used for balancing
-                Data.Map.Map TxOutRef DecoratedTxOut ->
+                MapUTXO ->
                 -- maximal combined value of external UTXOs that can be consumed (must have at least that value in external UTXOs)
                 Value ->
                 TransactionBuilder (Maybe ())

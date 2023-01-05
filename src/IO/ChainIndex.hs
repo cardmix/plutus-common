@@ -25,7 +25,8 @@ import           Data.Functor                      ((<&>))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
-import           Ledger                            (Address, DecoratedTxOut, TxOutRef (txOutRefId), POSIXTime)
+import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (txOutRefId), POSIXTime, Ada)
+import           Ledger.Ada                        (fromValue)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
@@ -34,13 +35,14 @@ import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
 import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
 import           IO.Time                           (currentTime)
 import           IO.Wallet                         (HasWallet, ownAddresses)
+import           Utils.ChainIndex                  (MapUTXO)
 import qualified Utils.Servant                     as Servant
 
 ----------------------------------- Chain index cache -----------------------------------
 
 data ChainIndexCache = ChainIndexCache {
     cacheAddresses  :: [Address],
-    cacheData       :: Map TxOutRef DecoratedTxOut,
+    cacheData       :: MapUTXO,
     cacheTime       :: POSIXTime
 }
     deriving (Show, Generic, FromJSON, ToJSON)
@@ -66,15 +68,19 @@ instance MonadIO m => HasUtxoData m where
 
 ----------------------------------- Chain index queries ---------------------------------
 
+-- Get all ada at a wallet
+getWalletAda :: HasWallet m => m Ada 
+getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
+
 -- Get all utxos at a wallet
-getWalletUtxos :: HasWallet m => m (Map TxOutRef DecoratedTxOut)
+getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
 getFromEndpoint :: Servant.Endpoint a
 getFromEndpoint = Servant.getFromEndpointOnPort 9083
 
 -- Get all utxos at a given address
-getUtxosAt :: Address -> IO (Map TxOutRef DecoratedTxOut)
+getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = foldUtxoRefsAt f Map.empty
   where
     f acc page' = do

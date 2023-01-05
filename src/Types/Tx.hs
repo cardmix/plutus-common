@@ -14,18 +14,17 @@ module Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
 import           Control.Monad.State              (State, execState)
-import           Data.Map                         (Map)
 import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
-import           Ledger                           (DecoratedTxOut)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Ledger.Typed.Scripts             (ValidatorTypes (..), Any)
-import           Plutus.V2.Ledger.Api             (POSIXTime, TxOutRef)
+import           Plutus.V2.Ledger.Api             (POSIXTime)
 import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
 import qualified Prelude                          as Haskell
+import           Utils.ChainIndex                 (MapUTXO)
 
 data TxConstructorError = TxConstructorError
     {
@@ -38,7 +37,7 @@ data TxConstructor a i o = TxConstructor
     {
         txCurrentTime          :: POSIXTime,
         txCreator              :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
-        txConstructorLookups   :: Map TxOutRef DecoratedTxOut,
+        txConstructorLookups   :: MapUTXO,
         txConstructorErrors    :: [TxConstructorError],
         txConstructorResult    :: Maybe (ScriptLookups a, TxConstraints i o)
     }
@@ -47,7 +46,7 @@ data TxConstructor a i o = TxConstructor
 type Transaction = TxConstructor Any (RedeemerType Any) (DatumType Any)
 type TransactionBuilder a = State Transaction a
 
-mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> Map TxOutRef DecoratedTxOut ->
+mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> MapUTXO ->
     TxConstructor a i o
 mkTxConstructor creator ct lookups = TxConstructor ct creator lookups [] $ Just (mempty, mempty)
 
