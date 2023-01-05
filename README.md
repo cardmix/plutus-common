@@ -4,7 +4,8 @@ This library extends [plutus-apps](https://github.com/input-output-hk/plutus-app
 
 # ENCOINS transactions DSL
 
-Module `Constraints.OffChain` contains the functions available in this DSL. These functions wrap the respective functions from plutus-apps, resulting in cleaner and more concise code. To construct a complex transaction, you can use those with a `do` notation.
+Module `Constraints.OffChain` contains the functions available in this DSL. These functions wrap the respective functions from [plutus-apps](https://github.com/input-output-hk/plutus-apps), resulting in cleaner and more concise code. To construct a complex transaction, you can use those with a `do` notation.
+
 &emsp;&emsp;For example, the following function mints the specified tokens, consumes the given `TxOutRef`, and sends the tokens to a particular script address:
 ```haskell
 myToken :: Value
@@ -23,6 +24,7 @@ myTokensMintTx ref amt = do
 
 You can then get the lookups and transaction constraints as follows:
 ```haskell
-constructTx :: TransactionBuilder () -> Transaction -> Maybe (ScriptLookups a, TxConstraints (RedeemerType a) (DatumType a))
+constructTx :: TransactionBuilder () -> Transaction ->
+    Maybe (ScriptLookups a, TxConstraints (RedeemerType a) (DatumType a))
 constructTx builder tx = txConstructorResult $ builder `execState` tx
 ```
