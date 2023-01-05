@@ -22,9 +22,9 @@ myTokensMintTx ref amt = do
     tokensMintedTx myMintingPolicy () v
 ```
 
-You can then get the lookups and transaction constraints as follows:
+You can then get the lookups and transaction constraints using `constructTx`:
 ```haskell
 constructTx :: TransactionBuilder () -> Transaction ->
-    Maybe (ScriptLookups a, TxConstraints (RedeemerType a) (DatumType a))
+    Maybe (ScriptLookups Any, TxConstraints (RedeemerType Any) (DatumType Any))
 constructTx builder tx = txConstructorResult $ builder `execState` tx
 ```
