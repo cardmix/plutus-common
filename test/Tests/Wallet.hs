@@ -32,7 +32,7 @@ import           Prelude                             hiding (readFile)
 import           Utils.Address                       (bech32ToKeyHashes, bech32ToAddress)
 
 instance HasWallet IO where
-    getRestoreWallet = restoreWalletFromFile "testnet/wallet.json"
+    getRestoredWallet = restoreWalletFromFile "testnet/wallet.json"
 
 daedalusAddress :: Text
 daedalusAddress = "addr_test1qpmv0wkr6z9sdqveecpuywrwcxyueft0wgle85cs9fhsvtgnt9a4spnfrrlpp7puw2lcx2zudf49ewyza4q9ha08qhdq7aezrw"

@@ -59,10 +59,10 @@ import           Utils.Tx                                           (apiSerializ
 
 import           PlutusTx.Extra.Prelude                             (replicate)
 
-------------------------------------------- Restore-wallet -------------------------------------------
+------------------------------------------- Restored-wallet -------------------------------------------
 
 class (Monad m, MonadIO m) => HasWallet m where
-    getRestoreWallet :: m RestoredWallet
+    getRestoredWallet :: m RestoredWallet
 
 data RestoredWallet = RestoredWallet
     { name             :: Text
@@ -98,7 +98,7 @@ walletIdFromFile fp = do
 
 getWalletId :: HasWallet m => m WalletId
 getWalletId = do
-    RestoredWallet{..} <- getRestoreWallet
+    RestoredWallet{..} <- getRestoredWallet
     pure $ genWalletId mnemonicSentence passphrase
 
 ------------------------------------------- Wallet functions -------------------------------------------
@@ -144,7 +144,7 @@ ownAddressesBech32 = do
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
 signTx (cardanoTxToSealedTx -> Just stx) = do
-    ppUser   <- passphrase <$> getRestoreWallet
+    ppUser   <- passphrase <$> getRestoredWallet
     walletId <- getWalletId
     let ppLenient = fromEither (error "Invalid passphrase.") $ convertPassphrase ppUser
     sign walletId ppLenient >>= (\case
