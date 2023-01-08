@@ -27,6 +27,7 @@ import           Types.Tx                         (TxConstructor (..), TxConstru
 (<&&>) :: (Semigroup a, Monad m) => m a -> m a -> m a
 (<&&>) = liftM2 (<>)
 
+-- If Nothing is passed as the 3rd argument, adds a specific error to the list and sets txConstructorResult to Nothing.
 failTx :: Text -> Text -> Maybe res -> State (TxConstructor a i o) (Maybe res)
 failTx eIn eReason r = if isJust r
     then return r

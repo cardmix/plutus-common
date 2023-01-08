@@ -76,8 +76,8 @@ getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$>
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
-getFromEndpoint :: Servant.Endpoint a
-getFromEndpoint = Servant.getFromEndpointOnPort 9083
+getFromEndpointChainIndex :: Servant.Endpoint a
+getFromEndpointChainIndex = Servant.getFromEndpointOnPort 9083
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
@@ -96,7 +96,7 @@ getUtxosTxsAt :: Address -> IO (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
 getUtxosTxsAt addr = do
   refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
   let txIds = map (txOutRefId . fst) refTxOuts
-  ciTxs <- getFromEndpoint $ Client.getTxs txIds
+  ciTxs <- getFromEndpointChainIndex $ Client.getTxs txIds
   pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
   where
     f acc page' = do
@@ -123,9 +123,9 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
             go newAcc (nextPageQuery page')
 
 unspentTxOutFromRef :: TxOutRef -> IO DecoratedTxOut
-unspentTxOutFromRef = getFromEndpoint . Client.getUnspentTxOut
+unspentTxOutFromRef = getFromEndpointChainIndex . Client.getUnspentTxOut
 
 -- Get the unspent transaction output references at an address.
 utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse
 utxoRefsAt pageQ =
-    getFromEndpoint . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential
+    getFromEndpointChainIndex . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential

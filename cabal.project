@@ -28,11 +28,6 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/encryptedcoins/encoins-bulletproofs.git
-  tag: 33d74636bda1079b96432ab1606d846292e58b76
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/plutus-apps
   tag: 7952b9d30d15779a7fd8103bdbc9612d5df18ec2
   subdir: 

@@ -103,8 +103,8 @@ getWalletId = do
 
 ------------------------------------------- Wallet functions -------------------------------------------
 
-getFromEndpoint :: Servant.Endpoint a
-getFromEndpoint = Servant.getFromEndpointOnPort 8090
+getFromEndpointWallet :: Servant.Endpoint a
+getFromEndpointWallet = Servant.getFromEndpointOnPort 8090
 
 -- Important note: this function only takes first used addres from the list, 
 -- while the one with the highest UTXO's sum on it may be preferred.
@@ -112,9 +112,9 @@ getFromEndpoint = Servant.getFromEndpointOnPort 8090
 getWalletAddrBech32 :: HasWallet m => m Text
 getWalletAddrBech32 = do
     walletId <- getWalletId
-    getFromEndpoint (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Used)) >>= \case
+    getFromEndpointWallet (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Used)) >>= \case
         v:_ -> pure $ v ^. key "id"._String
-        _   -> error $  "There is no addresses associated with this wallet ID:\n" <> show walletId
+        _   -> error $  "There are no addresses associated with this wallet ID:\n" <> show walletId
 
 getWalletAddr :: HasWallet m => m Address
 getWalletAddr = do
@@ -131,7 +131,7 @@ getWalletKeyHashes = do
         _                   -> error $ "Can't get wallet key hashes from bech32: " <> T.unpack addrWalletBech32
 
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
-getWalletFromId = getFromEndpoint . Client.getWallet Client.walletClient . ApiT
+getWalletFromId = getFromEndpointWallet . Client.getWallet Client.walletClient . ApiT
 
 ownAddresses :: HasWallet m => m [Address]
 ownAddresses = mapMaybe bech32ToAddress <$> ownAddressesBech32
@@ -139,7 +139,7 @@ ownAddresses = mapMaybe bech32ToAddress <$> ownAddressesBech32
 ownAddressesBech32 :: HasWallet m => m [Text]
 ownAddressesBech32 = do
     walletId <- getWalletId
-    as <- getFromEndpoint $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
+    as <- getFromEndpointWallet $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
@@ -151,7 +151,7 @@ signTx (cardanoTxToSealedTx -> Just stx) = do
         Just ctx -> pure ctx
         _        -> error "Unable to convert ApiSerialisedTransaction to a CardanoTx.") . apiSerializedTxToCardanoTx
     where
-        sign walletId pp = getFromEndpoint $ Client.signTransaction Client.transactionClient
+        sign walletId pp = getFromEndpointWallet $ Client.signTransaction Client.transactionClient
             (ApiT walletId)
             (ApiSignTransactionPostData (ApiT stx) (ApiT pp))
 signTx _ = error "Unable to convert CardanoTx to a SealedTx."
@@ -171,7 +171,7 @@ balanceTx params lookups cons = do
     where
         -- tx to pass to the wallet as JSON
         etx = fromEither (error . show) $ export params $ fromEither (error . show) $ mkTxWithParams params lookups cons
-        balance walletId = getFromEndpoint $ Client.balanceTransaction Client.transactionClient
+        balance walletId = getFromEndpointWallet $ Client.balanceTransaction Client.transactionClient
             (ApiT walletId)
             (toJSON etx)
 
@@ -179,7 +179,7 @@ balanceTx params lookups cons = do
 submitTx :: HasWallet m => CardanoTx -> m ()
 submitTx (cardanoTxToSealedTx -> Just stx) = do
     walletId <- getWalletId
-    void $ getFromEndpoint $
+    void $ getFromEndpointWallet $
         Client.submitTransaction Client.transactionClient
             (ApiT walletId)
             (ApiSerialisedTransaction $ ApiT stx)
@@ -197,7 +197,7 @@ awaitTxConfirmed ctx = go
     where
         go = do
             walletId <- getWalletId
-            res <- getFromEndpoint $ Client.getTransaction Client.transactionClient
+            res <- getFromEndpointWallet $ Client.getTransaction Client.transactionClient
                 (ApiT walletId)
                 (ApiTxId $ ApiT $ mkHash ctx)
                 TxMetadataNoSchema

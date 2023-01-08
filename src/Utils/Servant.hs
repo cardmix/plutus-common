@@ -16,5 +16,5 @@ getFromEndpointOnPort port endpoint = liftIO $ do
         endpoint
         (mkClientEnv manager (BaseUrl Http "localhost" port ""))
     case responseOrError of
-        Left err       -> throw err -- "Error while accessing endpoint."
+        Left err       -> throw err -- "Error while accessing the endpoint."
         Right response -> pure response

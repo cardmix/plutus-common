@@ -17,6 +17,10 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use uncurry"            #-}
+
 
 -- | Implements a custom currency with a minting policy that allows
 --   the minting of a fixed amount of units.

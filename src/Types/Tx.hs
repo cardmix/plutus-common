@@ -9,7 +9,6 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-
 module Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
