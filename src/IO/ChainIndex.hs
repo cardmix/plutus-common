@@ -82,30 +82,30 @@ getFromEndpoint = Servant.getFromEndpointOnPort 9083
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = foldUtxoRefsAt f Map.empty
-  where
-    f acc page' = do
-      let utxoRefs = pageItems page'
-      txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
-      let utxos = Map.fromList
-                $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
-                $ zip utxoRefs txOuts
-      pure $ acc <> utxos
+    where
+        f acc page' = do
+          let utxoRefs = pageItems page'
+          txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+          let utxos = Map.fromList
+                    $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
+                    $ zip utxoRefs txOuts
+          pure $ acc <> utxos
 
 -- Get all utxos and txs at a given address
 getUtxosTxsAt :: Address -> IO (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
 getUtxosTxsAt addr = do
-  refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
-  let txIds = map (txOutRefId . fst) refTxOuts
-  ciTxs <- getFromEndpoint $ Client.getTxs txIds
-  pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
-  where
-    f acc page' = do
-      let utxoRefs = pageItems page'
-      txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
-      let utxos = Map.fromList
-                $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
-                $ zip utxoRefs txOuts
-      pure $ acc <> utxos
+        refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
+        let txIds = map (txOutRefId . fst) refTxOuts
+        ciTxs <- getFromEndpoint $ Client.getTxs txIds
+        pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
+    where
+        f acc page' = do
+            let utxoRefs = pageItems page'
+            txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+            let utxos = Map.fromList
+                      $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
+                      $ zip utxoRefs txOuts
+            pure $ acc <> utxos
 
 -- Fold through each 'Page's of unspent 'TxOutRef's at a given 'Address', and
 -- accumulate the result.
