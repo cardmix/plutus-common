@@ -42,7 +42,6 @@ library
       Utils.ChainIndex
       Utils.Orphans
       Utils.Tx
-      Utils.Passphrase
       Utils.Servant
     build-depends:
       base                          >= 4.9 && < 5,

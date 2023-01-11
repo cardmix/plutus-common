@@ -35,6 +35,7 @@ import           Control.Monad.IO.Class                             (MonadIO(..)
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
+import           Data.Coerce                                        (coerce)
 import           Data.Map                                           (keys)
 import           Data.Maybe                                         (mapMaybe)
 import           Data.String                                        (IsString(..))
@@ -53,7 +54,6 @@ import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
 import           Prelude                                            hiding (replicate)
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
-import           Utils.Passphrase                                   (convertPassphrase)
 import qualified Utils.Servant                                      as Servant
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
@@ -146,8 +146,7 @@ signTx :: HasWallet m => CardanoTx -> m CardanoTx
 signTx (cardanoTxToSealedTx -> Just stx) = do
     ppUser   <- passphrase <$> getRestoreWallet
     walletId <- getWalletId
-    let ppLenient = fromEither (error "Invalid passphrase.") $ convertPassphrase ppUser
-    sign walletId ppLenient >>= (\case
+    sign walletId (coerce ppUser) >>= (\case
         Just ctx -> pure ctx
         _        -> error "Unable to convert ApiSerialisedTransaction to a CardanoTx.") . apiSerializedTxToCardanoTx
     where
