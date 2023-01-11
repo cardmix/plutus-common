@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleInstances            #-}
 {-# LANGUAGE LambdaCase                   #-}
 {-# LANGUAGE MultiParamTypeClasses        #-}
-{-# LANGUAGE NoImplicitPrelude            #-}
 {-# LANGUAGE NumericUnderscores           #-}
 {-# LANGUAGE OverloadedStrings            #-}
 {-# LANGUAGE PatternSynonyms              #-}
@@ -53,13 +52,10 @@ import           Ledger.Tx                                          (getCardanoT
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
-import           Prelude                                            hiding (replicate)
 import qualified Servant.Client                                     as Servant  
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
 import qualified Utils.Servant                                      as Servant
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
-
-import           PlutusTx.Extra.Prelude                             (replicate)
 
 ------------------------------------------- Restore-wallet -------------------------------------------
 
@@ -214,7 +210,7 @@ awaitTxConfirmed ctx = go
         mkHash = fromEither (error . show) . fromText . T.pack . show  . getCardanoTxId
 
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
-getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Integer -> m [TxOutRef]
+getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Int -> m [TxOutRef]
 getWalletTxOutRefs params pkh mbSkc n = do
     liftIO $ putStrLn "Balancing..."
     balancedTx <- balanceTx params lookups cons

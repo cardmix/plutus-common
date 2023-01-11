@@ -26,6 +26,8 @@ import           Data.Functor                      ((<&>))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
+import           IO.Time                           (currentTime)
+import           IO.Wallet                         (HasWallet, ownAddresses)
 import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (txOutRefId), POSIXTime, Ada)
 import           Ledger.Ada                        (fromValue)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
@@ -34,8 +36,6 @@ import qualified Plutus.ChainIndex.Client          as Client
 import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
 import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
-import           IO.Time                           (currentTime)
-import           IO.Wallet                         (HasWallet, ownAddresses)
 import qualified Servant.Client                    as Servant    
 import           Utils.ChainIndex                  (MapUTXO)
 import qualified Utils.Servant                     as Servant
