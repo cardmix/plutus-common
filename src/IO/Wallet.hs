@@ -9,6 +9,7 @@
 {-# LANGUAGE NoImplicitPrelude            #-}
 {-# LANGUAGE NumericUnderscores           #-}
 {-# LANGUAGE OverloadedStrings            #-}
+{-# LANGUAGE PatternSynonyms              #-}
 {-# LANGUAGE RecordWildCards              #-}
 {-# LANGUAGE ScopedTypeVariables          #-}
 {-# LANGUAGE TypeApplications             #-}
@@ -53,6 +54,7 @@ import           Ledger.Tx.CardanoAPI                               (unspentOutp
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
 import           Prelude                                            hiding (replicate)
+import qualified Servant.Client                                     as Servant  
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
 import qualified Utils.Servant                                      as Servant
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
@@ -106,6 +108,9 @@ getWalletId = do
 getFromEndpoint :: Servant.Endpoint a
 getFromEndpoint = Servant.getFromEndpointOnPort 8090
 
+pattern WalletApiConnectionError :: Servant.ClientError
+pattern WalletApiConnectionError <- Servant.ConnectionErrorOnPort 8090
+
 -- Important note: this function only takes first used addres from the list, 
 -- while the one with the highest UTXO's sum on it may be preferred.
 -- Maybe later we should add a check for the UTXO's sum on each used address and select one with the maximum amount.
@@ -141,6 +146,8 @@ ownAddressesBech32 = do
     walletId <- getWalletId
     as <- getFromEndpoint $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
+
+------------------------------------------- Tx functions -------------------------------------------
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
 signTx (cardanoTxToSealedTx -> Just stx) = do

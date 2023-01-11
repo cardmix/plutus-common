@@ -9,6 +9,7 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TupleSections              #-}
@@ -35,6 +36,7 @@ import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
 import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
 import           IO.Time                           (currentTime)
 import           IO.Wallet                         (HasWallet, ownAddresses)
+import qualified Servant.Client                    as Servant    
 import           Utils.ChainIndex                  (MapUTXO)
 import qualified Utils.Servant                     as Servant
 
@@ -68,6 +70,12 @@ instance MonadIO m => HasUtxoData m where
 
 ----------------------------------- Chain index queries ---------------------------------
 
+getFromEndpoint :: Servant.Endpoint a
+getFromEndpoint = Servant.getFromEndpointOnPort 9083
+
+pattern ChainIndexConnectionError :: Servant.ClientError
+pattern ChainIndexConnectionError <- Servant.ConnectionErrorOnPort 9083
+
 -- Get all ada at a wallet
 getWalletAda :: HasWallet m => m Ada 
 getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
@@ -75,9 +83,6 @@ getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$>
 -- Get all utxos at a wallet
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
-
-getFromEndpoint :: Servant.Endpoint a
-getFromEndpoint = Servant.getFromEndpointOnPort 9083
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
