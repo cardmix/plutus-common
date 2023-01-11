@@ -59,7 +59,6 @@ library
       data-default                           -any,
       directory                              -any,
       either                                 -any,
-      encoins-bulletproofs                   -any,
       extra                                  -any,
       file-embed                             -any,
       freer-extras                           -any,

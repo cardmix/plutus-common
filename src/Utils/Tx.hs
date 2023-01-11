@@ -12,8 +12,8 @@
 
 module Utils.Tx where
 
-import           Cardano.Api.Shelley               (EraInMode (..), AsType (..), SerialiseAsCBOR (..), InAnyCardanoEra (InAnyCardanoEra), 
-                                                    toEraInMode, ConsensusMode (CardanoMode), AnyCardanoEra (AnyCardanoEra), CardanoEra (BabbageEra))
+import           Cardano.Api.Shelley               (EraInMode (..), AsType (..), SerialiseAsCBOR (..), InAnyCardanoEra (..),
+                                                    ConsensusMode (..), AnyCardanoEra (..), CardanoEra (..), toEraInMode)
 import           Cardano.Wallet.Api.Types          (ApiSerialisedTransaction(..), getApiT)
 import           Cardano.Wallet.Primitive.Types.Tx (SealedTx, sealedTxFromCardano', cardanoTxIdeallyNoLaterThan)
 import           Data.Aeson.Extras                 (encodeByteString, tryDecode)
@@ -33,11 +33,11 @@ unbalancedTxToCBOR params = fmap (encodeByteString . serialiseToCBOR . partialTx
 textToCardanoTx :: Text -> Maybe CardanoTx
 textToCardanoTx txt = do
     bs <- either (const Nothing) Just $ tryDecode txt
-    tx <- either (const Nothing) Just $ deserialiseFromCBOR AsAlonzoTx bs
-    return $ CardanoApiTx $ SomeTx tx AlonzoEraInCardanoMode
+    tx <- either (const Nothing) Just $ deserialiseFromCBOR (AsTx AsBabbageEra) bs
+    return $ CardanoApiTx $ SomeTx tx BabbageEraInCardanoMode
 
 cardanoTxToText :: CardanoTx -> Maybe Text
-cardanoTxToText (CardanoApiTx (SomeTx tx AlonzoEraInCardanoMode)) = Just $ encodeByteString $ serialiseToCBOR tx
+cardanoTxToText (CardanoApiTx (SomeTx tx BabbageEraInCardanoMode)) = Just $ encodeByteString $ serialiseToCBOR tx
 cardanoTxToText _ = Nothing
 
 apiSerializedTxToCardanoTx :: ApiSerialisedTransaction -> Maybe CardanoTx

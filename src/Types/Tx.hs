@@ -9,11 +9,10 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-
 module Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
-import           Control.Monad.State              (State)
+import           Control.Monad.State              (State, execState)
 import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
 import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
@@ -52,3 +51,7 @@ mkTxConstructor creator ct lookups = TxConstructor ct creator lookups [] $ Just 
 
 selectTxConstructor :: [TxConstructor a i o] -> Maybe (TxConstructor a i o)
 selectTxConstructor = find (isJust . txConstructorResult)
+
+constructTx :: TransactionBuilder () -> Transaction ->
+    Maybe (ScriptLookups Any, TxConstraints (RedeemerType Any) (DatumType Any))
+constructTx builder tx = txConstructorResult $ builder `execState` tx
