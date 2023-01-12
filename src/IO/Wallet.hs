@@ -50,11 +50,11 @@ import           Ledger.Constraints                                 (TxConstrain
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
+import           Network.HTTP.Client                                (HttpExceptionContent, Request)
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
-import qualified Servant.Client                                     as Servant  
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
-import qualified Utils.Servant                                      as Servant
+import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
 ------------------------------------------- Restore-wallet -------------------------------------------
@@ -101,11 +101,11 @@ getWalletId = do
 
 ------------------------------------------- Wallet functions -------------------------------------------
 
-getFromEndpointWallet :: Servant.Endpoint a
-getFromEndpointWallet = Servant.getFromEndpointOnPort 8090
+getFromEndpointWallet :: Endpoint a
+getFromEndpointWallet = getFromEndpointOnPort 8090
 
-pattern WalletApiConnectionError :: Servant.ClientError
-pattern WalletApiConnectionError <- Servant.ConnectionErrorOnPort 8090
+pattern WalletApiConnectionError :: Request -> HttpExceptionContent -> ConnectionError
+pattern WalletApiConnectionError req content <- ConnectionErrorOnPort 8090 req content
 
 -- Important note: this function only takes first used addres from the list, 
 -- while the one with the highest UTXO's sum on it may be preferred.

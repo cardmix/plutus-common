@@ -30,15 +30,15 @@ import           IO.Time                           (currentTime)
 import           IO.Wallet                         (HasWallet, ownAddresses)
 import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (txOutRefId), POSIXTime, Ada)
 import           Ledger.Ada                        (fromValue)
+import           Network.HTTP.Client               (HttpExceptionContent, Request)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
 import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
 import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
-import qualified Servant.Client                    as Servant    
 import           Utils.ChainIndex                  (MapUTXO)
-import qualified Utils.Servant                     as Servant
+import           Utils.Servant                     (pattern ConnectionErrorOnPort, getFromEndpointOnPort, Endpoint, ConnectionError)
 
 ----------------------------------- Chain index cache -----------------------------------
 
@@ -70,11 +70,11 @@ instance MonadIO m => HasUtxoData m where
 
 ----------------------------------- Chain index queries ---------------------------------
 
-getFromEndpoint :: Servant.Endpoint a
-getFromEndpoint = Servant.getFromEndpointOnPort 9083
+getFromEndpointChainIndex :: Endpoint a
+getFromEndpointChainIndex = getFromEndpointOnPort 9083
 
-pattern ChainIndexConnectionError :: Servant.ClientError
-pattern ChainIndexConnectionError <- Servant.ConnectionErrorOnPort 9083
+pattern ChainIndexConnectionError :: Request -> HttpExceptionContent -> ConnectionError
+pattern ChainIndexConnectionError req content <- ConnectionErrorOnPort 9083 req content
 
 -- Get all ada at a wallet
 getWalletAda :: HasWallet m => m Ada 
@@ -83,9 +83,6 @@ getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$>
 -- Get all utxos at a wallet
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
-
-getFromEndpointChainIndex :: Servant.Endpoint a
-getFromEndpointChainIndex = Servant.getFromEndpointOnPort 9083
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
@@ -104,7 +101,7 @@ getUtxosTxsAt :: Address -> IO (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
 getUtxosTxsAt addr = do
         refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
         let txIds = map (txOutRefId . fst) refTxOuts
-        ciTxs <- getFromEndpoint $ Client.getTxs txIds
+        ciTxs <- getFromEndpointChainIndex $ Client.getTxs txIds
         pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
     where
         f acc page' = do
