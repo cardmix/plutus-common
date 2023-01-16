@@ -16,6 +16,7 @@ import           Cardano.Api.Shelley               (EraInMode (..), AsType (..),
                                                     ConsensusMode (..), AnyCardanoEra (..), CardanoEra (..), toEraInMode)
 import           Cardano.Wallet.Api.Types          (ApiSerialisedTransaction(..), getApiT)
 import           Cardano.Wallet.Primitive.Types.Tx (SealedTx, sealedTxFromCardano', cardanoTxIdeallyNoLaterThan)
+import           Control.FromSum                   (eitherToMaybe)
 import           Data.Aeson.Extras                 (encodeByteString, tryDecode)
 import           Data.Text                         (Text)
 import           Ledger                            (Params)
@@ -27,13 +28,13 @@ import           PlutusTx.Prelude                  hiding ((<>))
 ------------------------ Export/Import of transactions -------------------------
 
 unbalancedTxToCBOR :: Params -> UnbalancedTx -> Maybe Text
-unbalancedTxToCBOR params = fmap (encodeByteString . serialiseToCBOR . partialTx) .
-    either (const Nothing) Just . export params
+unbalancedTxToCBOR params = 
+    fmap (encodeByteString . serialiseToCBOR . partialTx) . eitherToMaybe . export params
 
 textToCardanoTx :: Text -> Maybe CardanoTx
 textToCardanoTx txt = do
-    bs <- either (const Nothing) Just $ tryDecode txt
-    tx <- either (const Nothing) Just $ deserialiseFromCBOR (AsTx AsBabbageEra) bs
+    bs <- eitherToMaybe $ tryDecode txt
+    tx <- eitherToMaybe $ deserialiseFromCBOR (AsTx AsBabbageEra) bs
     return $ CardanoApiTx $ SomeTx tx BabbageEraInCardanoMode
 
 cardanoTxToText :: CardanoTx -> Maybe Text
