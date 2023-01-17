@@ -28,9 +28,9 @@ import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
 import           IO.Time                           (currentTime)
 import           IO.Wallet                         (HasWallet, ownAddresses)
-import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime, Ada, CardanoTx, 
+import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime, Ada, CardanoTx,
                                                     getCardanoTxInputs, txOutValue, txOutAddress, getCardanoTxOutputs,
-                                                    TxIn (..))
+                                                    TxIn (..), _decoratedTxOutAddress)
 import qualified Ledger.Ada                        as Ada
 import           Network.HTTP.Client               (HttpExceptionContent, Request)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
@@ -137,14 +137,17 @@ utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse
 utxoRefsAt pageQ =
     getFromEndpointChainIndex . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential
 
+-- Get wallet total ada profit from Tx.
 getTxAdaProfit :: HasWallet m => CardanoTx -> m Ada
 getTxAdaProfit tx = do
-    addrs <- ownAddresses
-    utxos <- getWalletUtxos
-    let spentRefs = map txInRef $ getCardanoTxInputs tx
-        spent = sum $ map (Ada.fromValue . _decoratedTxOutValue) $ Map.elems $ Map.filterWithKey (\ref _ -> ref `elem` spentRefs) utxos
-        income = sum $ map (Ada.fromValue . txOutValue) $ filter ((`elem` addrs) . txOutAddress) $ getCardanoTxOutputs tx
-    pure $ income - spent
+        addrs <- ownAddresses
+        let spentRefs = map txInRef $ getCardanoTxInputs tx
+        spentTxOuts <- getFromEndpointChainIndex $ mapM Client.getUnspentTxOut spentRefs
+        let spent  = filterWalletAda addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
+            income = filterWalletAda addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
+        pure $ income - spent
+    where
+        filterWalletAda addrs getValue getAddr = sum . map (Ada.fromValue . getValue) . filter ((`elem` addrs) . getAddr)
 
 isProfitableTx :: HasWallet m => CardanoTx -> m Bool
 isProfitableTx tx = (>= 0) <$> getTxAdaProfit tx
