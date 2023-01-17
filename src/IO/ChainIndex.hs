@@ -28,8 +28,10 @@ import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
 import           IO.Time                           (currentTime)
 import           IO.Wallet                         (HasWallet, ownAddresses)
-import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (txOutRefId), POSIXTime, Ada)
-import           Ledger.Ada                        (fromValue)
+import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime, Ada, CardanoTx, 
+                                                    getCardanoTxInputs, txOutValue, txOutAddress, getCardanoTxOutputs,
+                                                    TxIn (..))
+import qualified Ledger.Ada                        as Ada
 import           Network.HTTP.Client               (HttpExceptionContent, Request)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
@@ -78,7 +80,7 @@ pattern ChainIndexConnectionError req content <- ConnectionErrorOnPort 9083 req 
 
 -- Get all ada at a wallet
 getWalletAda :: HasWallet m => m Ada 
-getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
+getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
 
 -- Get all utxos at a wallet
 getWalletUtxos :: HasWallet m => m MapUTXO
@@ -134,3 +136,15 @@ unspentTxOutFromRef = getFromEndpointChainIndex . Client.getUnspentTxOut
 utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse
 utxoRefsAt pageQ =
     getFromEndpointChainIndex . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential
+
+getTxAdaProfit :: HasWallet m => CardanoTx -> m Ada
+getTxAdaProfit tx = do
+    addrs <- ownAddresses
+    utxos <- getWalletUtxos
+    let spentRefs = map txInRef $ getCardanoTxInputs tx
+        spent = sum $ map (Ada.fromValue . _decoratedTxOutValue) $ Map.elems $ Map.filterWithKey (\ref _ -> ref `elem` spentRefs) utxos
+        income = sum $ map (Ada.fromValue . txOutValue) $ filter ((`elem` addrs) . txOutAddress) $ getCardanoTxOutputs tx
+    pure $ income - spent
+
+isProfitableTx :: HasWallet m => CardanoTx -> m Bool
+isProfitableTx tx = (>= 0) <$> getTxAdaProfit tx
