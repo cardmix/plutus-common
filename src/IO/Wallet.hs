@@ -6,9 +6,9 @@
 {-# LANGUAGE FlexibleInstances            #-}
 {-# LANGUAGE LambdaCase                   #-}
 {-# LANGUAGE MultiParamTypeClasses        #-}
-{-# LANGUAGE NoImplicitPrelude            #-}
 {-# LANGUAGE NumericUnderscores           #-}
 {-# LANGUAGE OverloadedStrings            #-}
+{-# LANGUAGE PatternSynonyms              #-}
 {-# LANGUAGE RecordWildCards              #-}
 {-# LANGUAGE ScopedTypeVariables          #-}
 {-# LANGUAGE TypeApplications             #-}
@@ -35,6 +35,7 @@ import           Control.Monad.IO.Class                             (MonadIO(..)
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
+import           Data.Coerce                                        (coerce)
 import           Data.Map                                           (keys)
 import           Data.Maybe                                         (mapMaybe)
 import           Data.String                                        (IsString(..))
@@ -49,17 +50,14 @@ import           Ledger.Constraints                                 (TxConstrain
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
+import           Network.HTTP.Client                                (HttpExceptionContent, Request)
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
-import           Prelude                                            hiding (replicate)
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
-import           Utils.Passphrase                                   (convertPassphrase)
-import qualified Utils.Servant                                      as Servant
+import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
-import           PlutusTx.Extra.Prelude                             (replicate)
-
-------------------------------------------- Restored-wallet -------------------------------------------
+------------------------------------------- Restore-wallet -------------------------------------------
 
 class (Monad m, MonadIO m) => HasWallet m where
     getRestoredWallet :: m RestoredWallet
@@ -103,8 +101,11 @@ getWalletId = do
 
 ------------------------------------------- Wallet functions -------------------------------------------
 
-getFromEndpointWallet :: Servant.Endpoint a
-getFromEndpointWallet = Servant.getFromEndpointOnPort 8090
+getFromEndpointWallet :: Endpoint a
+getFromEndpointWallet = getFromEndpointOnPort 8090
+
+pattern WalletApiConnectionError :: Request -> HttpExceptionContent -> ConnectionError
+pattern WalletApiConnectionError req content <- ConnectionErrorOnPort 8090 req content
 
 -- Important note: this function only takes first used addres from the list, 
 -- while the one with the highest UTXO's sum on it may be preferred.
@@ -142,12 +143,13 @@ ownAddressesBech32 = do
     as <- getFromEndpointWallet $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
 
+------------------------------------------- Tx functions -------------------------------------------
+
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
 signTx (cardanoTxToSealedTx -> Just stx) = do
     ppUser   <- passphrase <$> getRestoredWallet
     walletId <- getWalletId
-    let ppLenient = fromEither (error "Invalid passphrase.") $ convertPassphrase ppUser
-    sign walletId ppLenient >>= (\case
+    sign walletId (coerce ppUser) >>= (\case
         Just ctx -> pure ctx
         _        -> error "Unable to convert ApiSerialisedTransaction to a CardanoTx.") . apiSerializedTxToCardanoTx
     where
@@ -208,7 +210,7 @@ awaitTxConfirmed ctx = go
         mkHash = fromEither (error . show) . fromText . T.pack . show  . getCardanoTxId
 
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
-getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Integer -> m [TxOutRef]
+getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Int -> m [TxOutRef]
 getWalletTxOutRefs params pkh mbSkc n = do
     liftIO $ putStrLn "Balancing..."
     balancedTx <- balanceTx params lookups cons

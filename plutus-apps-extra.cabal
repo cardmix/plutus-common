@@ -42,7 +42,6 @@ library
       Utils.ChainIndex
       Utils.Orphans
       Utils.Tx
-      Utils.Passphrase
       Utils.Servant
     build-depends:
       base                          >= 4.9 && < 5,
@@ -52,14 +51,18 @@ library
       bytestring                             -any,
       cardano-addresses                      -any,
       cardano-api                            -any,
+      cardano-crypto-class                   -any,
       cardano-ledger-alonzo                  -any,
+      cardano-ledger-babbage                 -any,
       cardano-ledger-byron                   -any,
       cardano-ledger-core                    -any,
+      cardano-ledger-shelley                 -any,
       cardano-wallet-core                    -any,
       containers                             -any,
       data-default                           -any,
       directory                              -any,
       either                                 -any,
+      exceptions                             -any,
       extra                                  -any,
       file-embed                             -any,
       freer-extras                           -any,

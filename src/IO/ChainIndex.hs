@@ -9,6 +9,7 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TupleSections              #-}
@@ -25,18 +26,21 @@ import           Data.Functor                      ((<&>))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
-import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (txOutRefId), POSIXTime, Ada)
-import           Ledger.Ada                        (fromValue)
+import           IO.Time                           (currentTime)
+import           IO.Wallet                         (HasWallet, ownAddresses)
+import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime, Ada, CardanoTx,
+                                                    getCardanoTxInputs, txOutValue, txOutAddress, getCardanoTxOutputs,
+                                                    TxIn (..), _decoratedTxOutAddress)
+import qualified Ledger.Ada                        as Ada
+import           Network.HTTP.Client               (HttpExceptionContent, Request)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
 import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
 import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
-import           IO.Time                           (currentTime)
-import           IO.Wallet                         (HasWallet, ownAddresses)
 import           Utils.ChainIndex                  (MapUTXO)
-import qualified Utils.Servant                     as Servant
+import           Utils.Servant                     (pattern ConnectionErrorOnPort, getFromEndpointOnPort, Endpoint, ConnectionError)
 
 ----------------------------------- Chain index cache -----------------------------------
 
@@ -68,44 +72,47 @@ instance MonadIO m => HasUtxoData m where
 
 ----------------------------------- Chain index queries ---------------------------------
 
+getFromEndpointChainIndex :: Endpoint a
+getFromEndpointChainIndex = getFromEndpointOnPort 9083
+
+pattern ChainIndexConnectionError :: Request -> HttpExceptionContent -> ConnectionError
+pattern ChainIndexConnectionError req content <- ConnectionErrorOnPort 9083 req content
+
 -- Get all ada at a wallet
 getWalletAda :: HasWallet m => m Ada 
-getWalletAda = mconcat . fmap (fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
+getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
 
 -- Get all utxos at a wallet
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
-getFromEndpointChainIndex :: Servant.Endpoint a
-getFromEndpointChainIndex = Servant.getFromEndpointOnPort 9083
-
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = foldUtxoRefsAt f Map.empty
-  where
-    f acc page' = do
-      let utxoRefs = pageItems page'
-      txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
-      let utxos = Map.fromList
-                $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
-                $ zip utxoRefs txOuts
-      pure $ acc <> utxos
+    where
+        f acc page' = do
+          let utxoRefs = pageItems page'
+          txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+          let utxos = Map.fromList
+                    $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
+                    $ zip utxoRefs txOuts
+          pure $ acc <> utxos
 
 -- Get all utxos and txs at a given address
 getUtxosTxsAt :: Address -> IO (Map TxOutRef (DecoratedTxOut, ChainIndexTx))
 getUtxosTxsAt addr = do
-  refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
-  let txIds = map (txOutRefId . fst) refTxOuts
-  ciTxs <- getFromEndpointChainIndex $ Client.getTxs txIds
-  pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
-  where
-    f acc page' = do
-      let utxoRefs = pageItems page'
-      txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
-      let utxos = Map.fromList
-                $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
-                $ zip utxoRefs txOuts
-      pure $ acc <> utxos
+        refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
+        let txIds = map (txOutRefId . fst) refTxOuts
+        ciTxs <- getFromEndpointChainIndex $ Client.getTxs txIds
+        pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
+    where
+        f acc page' = do
+            let utxoRefs = pageItems page'
+            txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+            let utxos = Map.fromList
+                      $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
+                      $ zip utxoRefs txOuts
+            pure $ acc <> utxos
 
 -- Fold through each 'Page's of unspent 'TxOutRef's at a given 'Address', and
 -- accumulate the result.
@@ -129,3 +136,18 @@ unspentTxOutFromRef = getFromEndpointChainIndex . Client.getUnspentTxOut
 utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse
 utxoRefsAt pageQ =
     getFromEndpointChainIndex . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential
+
+-- Get wallet total ada profit from Tx.
+getTxAdaProfit :: HasWallet m => CardanoTx -> m Ada
+getTxAdaProfit tx = do
+        addrs <- ownAddresses
+        let spentRefs = map txInRef $ getCardanoTxInputs tx
+        spentTxOuts <- getFromEndpointChainIndex $ mapM Client.getUnspentTxOut spentRefs
+        let spent  = filterWalletAda addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
+            income = filterWalletAda addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
+        pure $ income - spent
+    where
+        filterWalletAda addrs getValue getAddr = sum . map (Ada.fromValue . getValue) . filter ((`elem` addrs) . getAddr)
+
+isProfitableTx :: HasWallet m => CardanoTx -> m Bool
+isProfitableTx tx = (>= 0) <$> getTxAdaProfit tx
