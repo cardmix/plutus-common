@@ -40,6 +40,7 @@ library
       Types.Tx
       Utils.Address
       Utils.ChainIndex
+      Utils.Crypto
       Utils.Orphans
       Utils.Tx
       Utils.Servant
@@ -59,6 +60,7 @@ library
       cardano-ledger-shelley                 -any,
       cardano-wallet-core                    -any,
       containers                             -any,
+      cryptonite                             -any,
       data-default                           -any,
       directory                              -any,
       either                                 -any,
@@ -72,6 +74,7 @@ library
       http-client                            -any,
       lens                                   -any,
       lens-aeson                             -any,
+      memory                                 -any,
       mtl                                    -any,
       openapi3                               -any,
       playground-common                      -any,

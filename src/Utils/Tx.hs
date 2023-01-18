@@ -18,16 +18,16 @@ import           Cardano.Ledger.Babbage.Tx         (ValidatedTx(ValidatedTx))
 import           Cardano.Ledger.Shelley.API        (WitVKey(WitVKey), VKey(VKey))
 import           Cardano.Wallet.Api.Types          (ApiSerialisedTransaction(..), getApiT)
 import           Cardano.Wallet.Primitive.Types.Tx (SealedTx, sealedTxFromCardano', cardanoTxIdeallyNoLaterThan)
-import qualified Data.Set                          as Set
 import           Control.FromSum                   (fromMaybe, eitherToMaybe)                   
 import           Control.Lens                      (At (at), (&), (?~))
 import           Data.Aeson.Extras                 (encodeByteString, tryDecode)
+import qualified Data.Set                          as Set
 import           Data.Text                         (Text)
 import           Ledger                            (Params, Signature (..), cardanoTxMap, signatures, PubKey (..))
 import           Ledger.Constraints                (UnbalancedTx)
 import           Ledger.Tx                         (CardanoTx (..), SomeCardanoApiTx (..))
-import           Plutus.V1.Ledger.Bytes            (bytes)
 import           Plutus.Contract.Wallet            (ExportTx (..), export)
+import           Plutus.V1.Ledger.Bytes            (bytes)
 import           Plutus.V2.Ledger.Api              (fromBuiltin)
 
 ------------------------ Export/Import of transactions -------------------------
@@ -57,7 +57,7 @@ cardanoTxToSealedTx = \case
     (CardanoApiTx (SomeTx tx _)) -> Just $ sealedTxFromCardano' tx
     _                            -> Nothing
 
------------------------- External pubkeys and signatures -------------------------
+------------------------ External keys and signatures -------------------------
 
 addCardanoTxSignature :: PubKey -> Signature -> CardanoTx -> CardanoTx
 addCardanoTxSignature pubKey sig = cardanoTxMap addSignatureTx addSignatureCardano
