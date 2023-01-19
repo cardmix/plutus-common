@@ -45,10 +45,9 @@ import qualified Data.Text                                          as T
 import           Data.Text.Class                                    (FromText(fromText))
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
-import           IO.ChainIndex                                      (getFromEndpointChainIndex, getUtxosAt)
+import           IO.ChainIndex                                      (getUtxosAt)
 import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..), PaymentPubKeyHash,
-                                                                     StakePubKeyHash, TxOutRef, StakingCredential, Ada, getCardanoTxInputs,
-                                                                     TxIn (..), txOutValue, txOutAddress, getCardanoTxOutputs,
+                                                                     StakePubKeyHash, TxOutRef, StakingCredential, Ada, txOutValue, txOutAddress, getCardanoTxOutputs,
                                                                     _decoratedTxOutAddress, Value)
 import           Ledger.Ada                                         ()
 import qualified Ledger.Ada                                         as Ada
@@ -58,7 +57,6 @@ import           Ledger.Typed.Scripts                               (ValidatorTy
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
-import qualified Plutus.ChainIndex.Client                           as Client
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
