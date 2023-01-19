@@ -160,19 +160,18 @@ getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
 -- Get wallet total profit from Tx.
-getTxProfit :: HasWallet m => CardanoTx -> m Value
-getTxProfit tx = do
+getTxProfit :: HasWallet m => CardanoTx -> MapUTXO -> m Value
+getTxProfit tx txUtxos = do
         addrs <- ownAddresses
-        let spentRefs = map txInRef $ getCardanoTxInputs tx
-        spentTxOuts <- getFromEndpointChainIndex $ mapM Client.getUnspentTxOut spentRefs
-        let spent  = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
+        let txOuts = Map.elems txUtxos
+            spent  = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress txOuts
             income = getTotalValue addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
         pure $ spent <> income
     where
         getTotalValue addrs getValue getAddr = mconcat . map getValue . filter ((`elem` addrs) . getAddr)
 
-isProfitableTx :: HasWallet m => CardanoTx -> m Bool
-isProfitableTx tx = all ((>= 0) . (^. _3)) . Value.flattenValue <$> getTxProfit tx
+isProfitableTx :: HasWallet m => CardanoTx -> MapUTXO -> m Bool
+isProfitableTx tx txUtxos = all ((>= 0) . (^. _3)) . Value.flattenValue <$> getTxProfit tx txUtxos
  
 ------------------------------------------- Tx functions -------------------------------------------
 
