@@ -36,7 +36,7 @@ import           Data.Aeson                                         (FromJSON(..
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
 import           Data.Coerce                                        (coerce)
-import           Data.Map                                           (keys)
+import qualified Data.Map                                           as Map
 import           Data.Maybe                                         (mapMaybe)
 import           Data.String                                        (IsString(..))
 import           Data.Text                                          (Text)
@@ -44,16 +44,23 @@ import qualified Data.Text                                          as T
 import           Data.Text.Class                                    (FromText(fromText))
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
-import           Ledger                                             (Address, CardanoTx (..), Params (..), PaymentPubKeyHash, StakePubKeyHash, TxOutRef, StakingCredential)
-import           Ledger.Ada                                         (lovelaceValueOf)
+import           IO.ChainIndex                                      (getFromEndpointChainIndex, getUtxosAt)
+import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..), PaymentPubKeyHash, 
+                                                                     StakePubKeyHash, TxOutRef, StakingCredential, Ada, getCardanoTxInputs, 
+                                                                     TxIn (..), txOutValue, txOutAddress, getCardanoTxOutputs, 
+                                                                    _decoratedTxOutAddress)
+import           Ledger.Ada                                         ()
+import qualified Ledger.Ada                                         as Ada
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
+import qualified Plutus.ChainIndex.Client                           as Client
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
 import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
+import           Utils.ChainIndex                                   (MapUTXO)
 import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
@@ -143,6 +150,29 @@ ownAddressesBech32 = do
     as <- getFromEndpointWallet $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
 
+-- Get all ada at a wallet
+getWalletAda :: HasWallet m => m Ada 
+getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
+
+-- Get all utxos at a wallet
+getWalletUtxos :: HasWallet m => m MapUTXO
+getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
+
+-- Get wallet total ada profit from Tx.
+getTxAdaProfit :: HasWallet m => CardanoTx -> m Ada
+getTxAdaProfit tx = do
+        addrs <- ownAddresses
+        let spentRefs = map txInRef $ getCardanoTxInputs tx
+        spentTxOuts <- getFromEndpointChainIndex $ mapM Client.getUnspentTxOut spentRefs
+        let spent  = filterWalletAda addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
+            income = filterWalletAda addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
+        pure $ income - spent
+    where
+        filterWalletAda addrs getValue getAddr = sum . map (Ada.fromValue . getValue) . filter ((`elem` addrs) . getAddr)
+
+isProfitableTx :: HasWallet m => CardanoTx -> m Bool
+isProfitableTx tx = (>= 0) <$> getTxAdaProfit tx
+
 ------------------------------------------- Tx functions -------------------------------------------
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
@@ -222,11 +252,11 @@ getWalletTxOutRefs params pkh mbSkc n = do
     submitTxConfirmed signedTx
     let refs = case signedTx of
             EmulatorTx _    -> error "Can not get TxOutRef's from EmulatorTx."
-            CardanoApiTx tx -> keys $ unspentOutputsTx tx
+            CardanoApiTx tx -> Map.keys $ unspentOutputsTx tx
     liftIO $ putStrLn "Submitted!"
     return refs
     where
         lookups = mempty :: ScriptLookups Void
         cons    = case mbSkc of
-            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skc $ lovelaceValueOf 10_000_000
-            Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
+            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skc $ Ada.lovelaceValueOf 10_000_000
+            Nothing -> mustPayToPubKey pkh $ Ada.lovelaceValueOf 10_000_000
