@@ -30,6 +30,7 @@ import           Cardano.Wallet.Primitive.Types.Address             (AddressStat
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
+import           Control.Lens.Tuple                                 (_3)
 import           Control.Monad                                      (void, unless)
 import           Control.Monad.IO.Class                             (MonadIO(..))
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
@@ -45,12 +46,13 @@ import           Data.Text.Class                                    (FromText(fr
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
 import           IO.ChainIndex                                      (getFromEndpointChainIndex, getUtxosAt)
-import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..), PaymentPubKeyHash, 
-                                                                     StakePubKeyHash, TxOutRef, StakingCredential, Ada, getCardanoTxInputs, 
-                                                                     TxIn (..), txOutValue, txOutAddress, getCardanoTxOutputs, 
-                                                                    _decoratedTxOutAddress)
+import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..), PaymentPubKeyHash,
+                                                                     StakePubKeyHash, TxOutRef, StakingCredential, Ada, getCardanoTxInputs,
+                                                                     TxIn (..), txOutValue, txOutAddress, getCardanoTxOutputs,
+                                                                    _decoratedTxOutAddress, Value)
 import           Ledger.Ada                                         ()
 import qualified Ledger.Ada                                         as Ada
+import qualified Ledger.Value                                       as Value
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
@@ -63,7 +65,6 @@ import           Utils.Address                                      (bech32ToAdd
 import           Utils.ChainIndex                                   (MapUTXO)
 import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
-
 ------------------------------------------- Restore-wallet -------------------------------------------
 
 class (Monad m, MonadIO m) => HasWallet m where
@@ -158,21 +159,21 @@ getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
--- Get wallet total ada profit from Tx.
-getTxAdaProfit :: HasWallet m => CardanoTx -> m Ada
-getTxAdaProfit tx = do
+-- Get wallet total profit from Tx.
+getTxProfit :: HasWallet m => CardanoTx -> m Value
+getTxProfit tx = do
         addrs <- ownAddresses
         let spentRefs = map txInRef $ getCardanoTxInputs tx
         spentTxOuts <- getFromEndpointChainIndex $ mapM Client.getUnspentTxOut spentRefs
-        let spent  = filterWalletAda addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
-            income = filterWalletAda addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
-        pure $ income - spent
+        let spent  = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
+            income = getTotalValue addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
+        pure $ spent <> income
     where
-        filterWalletAda addrs getValue getAddr = sum . map (Ada.fromValue . getValue) . filter ((`elem` addrs) . getAddr)
+        getTotalValue addrs getValue getAddr = mconcat . map getValue . filter ((`elem` addrs) . getAddr)
 
 isProfitableTx :: HasWallet m => CardanoTx -> m Bool
-isProfitableTx tx = (>= 0) <$> getTxAdaProfit tx
-
+isProfitableTx tx = all ((>= 0) . (^. _3)) . Value.flattenValue <$> getTxProfit tx
+ 
 ------------------------------------------- Tx functions -------------------------------------------
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
