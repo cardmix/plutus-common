@@ -49,7 +49,6 @@ import           IO.ChainIndex                                      (getUtxosAt)
 import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..), PaymentPubKeyHash,
                                                                      StakePubKeyHash, TxOutRef, StakingCredential, Ada, txOutValue, txOutAddress, getCardanoTxOutputs,
                                                                     _decoratedTxOutAddress, Value)
-import           Ledger.Ada                                         ()
 import qualified Ledger.Ada                                         as Ada
 import qualified Ledger.Value                                       as Value
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
