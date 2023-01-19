@@ -22,6 +22,7 @@ import           System.Random                    (RandomGen, Random (..), mkStd
 import           Utils.ChainIndex                 (MapUTXO)
 
 -- TODO: implement budget constraints
+-- TODO: make use of the coin selection library from cardano-wallet
 
 data CoinSelectionBudget = CoinSelectionBudget
     {

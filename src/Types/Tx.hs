@@ -15,12 +15,13 @@ import           Cardano.Api                      (FromJSON, ToJSON)
 import           Control.Monad.State              (State, execState)
 import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
-import           Ledger.Address                   (PaymentPubKeyHash, StakePubKeyHash)
+import           Ledger                           (StakingCredential)
+import           Ledger.Address                   (PaymentPubKeyHash)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Ledger.Typed.Scripts             (ValidatorTypes (..), Any)
 import           Plutus.V2.Ledger.Api             (POSIXTime)
-import           PlutusTx.Prelude                 hiding (mempty, Semigroup, (<$>), unless, mapMaybe, toList, fromInteger)
+import           PlutusTx.Prelude                 hiding (Semigroup, (<$>), mempty, unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
 import qualified Prelude                          as Haskell
 import           Utils.ChainIndex                 (MapUTXO)
@@ -34,8 +35,8 @@ data TxConstructorError = TxConstructorError
 
 data TxConstructor a i o = TxConstructor
     {
+        txCreator              :: (PaymentPubKeyHash, Maybe StakingCredential),
         txCurrentTime          :: POSIXTime,
-        txCreator              :: (PaymentPubKeyHash, Maybe StakePubKeyHash),
         txConstructorLookups   :: MapUTXO,
         txConstructorErrors    :: [TxConstructorError],
         txConstructorResult    :: Maybe (ScriptLookups a, TxConstraints i o)
@@ -45,13 +46,12 @@ data TxConstructor a i o = TxConstructor
 type Transaction = TxConstructor Any (RedeemerType Any) (DatumType Any)
 type TransactionBuilder a = State Transaction a
 
-mkTxConstructor :: (PaymentPubKeyHash, Maybe StakePubKeyHash) -> POSIXTime -> MapUTXO ->
-    TxConstructor a i o
-mkTxConstructor creator ct lookups = TxConstructor ct creator lookups [] $ Just (mempty, mempty)
+mkTxConstructor :: (PaymentPubKeyHash, Maybe StakingCredential) -> POSIXTime -> MapUTXO -> Transaction
+mkTxConstructor creator ct lookups = TxConstructor creator ct lookups [] $ Just (mempty, mempty)
 
-selectTxConstructor :: [TxConstructor a i o] -> Maybe (TxConstructor a i o)
+selectTxConstructor :: [Transaction] -> Maybe Transaction
 selectTxConstructor = find (isJust . txConstructorResult)
 
-constructTx :: TransactionBuilder () -> Transaction ->
+constructTxConstraints :: TransactionBuilder () -> Transaction ->
     Maybe (ScriptLookups Any, TxConstraints (RedeemerType Any) (DatumType Any))
-constructTx builder tx = txConstructorResult $ builder `execState` tx
+constructTxConstraints builder tx = txConstructorResult $ builder `execState` tx

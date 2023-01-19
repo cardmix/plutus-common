@@ -10,10 +10,11 @@
 
 module Constraints.OffChain where
 
-import           Control.Monad                    (Monad, liftM2)
-import           Control.Monad.State              (State, MonadState (..))
+import           Control.Monad                    (Monad, liftM2, when)
+import           Control.Monad.State              (MonadState (..))
+import           Data.Functor                     (($>))
+import qualified Data.Map                         as Map
 import           Data.Maybe                       (fromJust)
-import qualified Data.Map
 import           Data.Text                        (Text)
 import           Ledger                           (Versioned, mintingPolicyHash, validatorHash, interval, DecoratedTxOut)
 import           Ledger.Address                   (PaymentPubKeyHash)
@@ -22,13 +23,15 @@ import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2Minti
 import           Plutus.V2.Ledger.Api
 import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mconcat, mempty)
 import           Prelude                          (Semigroup, (<>), mempty)
-import           Types.Tx                         (TxConstructor (..), TxConstructorError (..))
+
+import           Constraints.CoinSelection        (CoinSelectionBudget, CoinSelectionParams, genCoinSelection)
+import           Types.Tx                         (TxConstructor (..), TxConstructorError (..), TransactionBuilder)
 
 (<&&>) :: (Semigroup a, Monad m) => m a -> m a -> m a
 (<&&>) = liftM2 (<>)
 
 -- If Nothing is passed as the 3rd argument, adds a specific error to the list and sets txConstructorResult to Nothing.
-failTx :: Text -> Text -> Maybe res -> State (TxConstructor a i o) (Maybe res)
+failTx :: Text -> Text -> Maybe res -> TransactionBuilder (Maybe res)
 failTx eIn eReason r = if isJust r
     then return r
     else do
@@ -37,64 +40,71 @@ failTx eIn eReason r = if isJust r
         put constr { txConstructorErrors = TxConstructorError eIn eReason : errorList, txConstructorResult = Nothing }
         return r
 
-utxoSpentPublicKeyTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
+utxosSpentPublicKeyTx :: [TxOutRef] -> TransactionBuilder ()
+utxosSpentPublicKeyTx refs = do
+    mapM_ (\ref -> utxoSpentPublicKeyTx (\r _ -> ref == r)) refs
+    constr <- get
+    when (isNothing $ txConstructorResult constr) $
+        failTx "utxosSpentPublicKeyTx" "Cannot spend all provided references" Nothing $> ()
+
+utxoSpentPublicKeyTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx "utxoSpentPublicKeyTx" "No matching utxos found"
 
-utxoSpentPublicKeyTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
+utxoSpentPublicKeyTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentPublicKeyTx' f = do
     constr <- get
     let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos'  = Data.Map.filterWithKey f utxos
-    if Data.Map.null utxos'
+        utxos'  = Map.filterWithKey f utxos
+    if Map.null utxos'
         then return Nothing
         else do
-            let utxo = head $ Data.Map.toList utxos'
+            let utxo = head $ Map.toList utxos'
                 ref  = fst utxo
-            put constr { txConstructorResult = res <&&> Just (unspentOutputs (Data.Map.fromList [utxo]), mustSpendPubKeyOutput ref),
-                txConstructorLookups = Data.Map.delete ref utxos }
+            put constr { txConstructorResult = res <&&> Just (unspentOutputs (Map.fromList [utxo]), mustSpendPubKeyOutput ref),
+                txConstructorLookups = Map.delete ref utxos }
             return $ Just utxo
 
 utxoSpentScriptTx :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) -> (TxOutRef -> DecoratedTxOut -> Validator) ->
-    (TxOutRef -> DecoratedTxOut -> redeemer) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
+    (TxOutRef -> DecoratedTxOut -> redeemer) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentScriptTx f scriptVal red = utxoSpentScriptTx' f scriptVal red >>= failTx "utxoSpentScriptTx" "No matching utxos found"
 
 utxoSpentScriptTx' :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) -> (TxOutRef -> DecoratedTxOut -> Validator) ->
-    (TxOutRef -> DecoratedTxOut -> redeemer) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
+    (TxOutRef -> DecoratedTxOut -> redeemer) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentScriptTx' f scriptVal red = do
     constr <- get
     let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos'  = Data.Map.filterWithKey f utxos
-    if Data.Map.null utxos'
+        utxos'  = Map.filterWithKey f utxos
+    if Map.null utxos'
         then return Nothing
         else do
-            let utxo = head $ Data.Map.toList utxos'
+            let utxo = head $ Map.toList utxos'
                 ref  = fst utxo
-            put constr { txConstructorResult = res <&&> Just (unspentOutputs (Data.Map.fromList [utxo]) <> plutusV2OtherScript (uncurry scriptVal utxo),
+            put constr { txConstructorResult = res <&&> Just (unspentOutputs (Map.fromList [utxo]) <> plutusV2OtherScript (uncurry scriptVal utxo),
                         mustSpendScriptOutput ref (Redeemer $ toBuiltinData $ uncurry red utxo)),
-                txConstructorLookups = Data.Map.delete ref utxos }
+                txConstructorLookups = Map.delete ref utxos }
             return $ Just utxo
 
-utxoReferencedTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
+utxoReferencedTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoReferencedTx f = utxoReferencedTx' f >>= failTx "utxoReferencedTx" "No matching utxos found"
 
-utxoReferencedTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> State (TxConstructor a i o) (Maybe (TxOutRef, DecoratedTxOut))
+utxoReferencedTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoReferencedTx' f = do
     constr <- get
     let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos'  = Data.Map.filterWithKey f utxos
-    if Data.Map.null utxos'
+        utxos'  = Map.filterWithKey f utxos
+    if Map.null utxos'
         then return Nothing
         else do
-            let utxo = head $ Data.Map.toList utxos'
+            let utxo = head $ Map.toList utxos'
                 ref  = fst utxo
-            put constr { txConstructorResult = res <&&> Just (unspentOutputs (Data.Map.fromList [utxo]), mustReferenceOutput ref),
-                txConstructorLookups = Data.Map.delete ref utxos }
+            put constr { txConstructorResult = res <&&> Just (unspentOutputs (Map.fromList [utxo]), mustReferenceOutput ref),
+                txConstructorLookups = Map.delete ref utxos }
             return $ Just utxo
 
-utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakingCredential -> Value -> Maybe datum -> State (TxConstructor a i o) ()
+utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakingCredential -> Value -> Maybe datum -> TransactionBuilder ()
 utxoProducedPublicKeyTx pkh skc val dat = do
     constr <- get
     let res = txConstructorResult constr
@@ -106,7 +116,7 @@ utxoProducedPublicKeyTx pkh skc val dat = do
             else mustPayToPubKey pkh val
     put constr { txConstructorResult = res <&&> Just (mempty, c) }
 
-utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakingCredential -> Value -> datum -> State (TxConstructor a i o) ()
+utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakingCredential -> Value -> datum -> TransactionBuilder ()
 utxoProducedScriptTx vh skc val dat = do
     constr <- get
     let res = txConstructorResult constr
@@ -114,13 +124,13 @@ utxoProducedScriptTx vh skc val dat = do
           | otherwise  = mustPayToOtherScriptWithDatumHash vh (Datum $ toBuiltinData dat) val
     put constr { txConstructorResult = res <&&> Just (mempty, c) }
 
-tokensMintedTx :: ToData redeemer => MintingPolicy -> redeemer -> Value -> State (TxConstructor a i o) ()
+tokensMintedTx :: ToData redeemer => MintingPolicy -> redeemer -> Value -> TransactionBuilder ()
 tokensMintedTx mp red v = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <&&> Just (plutusV2MintingPolicy mp, mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v) }
 
-validatedInIntervalTx :: POSIXTime -> POSIXTime -> State (TxConstructor a i o) ()
+validatedInIntervalTx :: POSIXTime -> POSIXTime -> TransactionBuilder ()
 validatedInIntervalTx startTime endTime = do
     constr <- get
     let ct   = txCurrentTime constr
@@ -132,7 +142,7 @@ validatedInIntervalTx startTime endTime = do
             _ <- failTx "validatedInIntervalTx" "Current time is not in the interval" Nothing
             return ()
 
-postValidatorTx :: ToData datum => Address -> Versioned Validator -> Maybe datum -> Value -> State (TxConstructor a i o) ()
+postValidatorTx :: ToData datum => Address -> Versioned Validator -> Maybe datum -> Value -> TransactionBuilder ()
 postValidatorTx addr vld dat val = do
     constr <- get
     let res     = txConstructorResult constr
@@ -141,7 +151,7 @@ postValidatorTx addr vld dat val = do
         lookups = otherScript vld
     put constr { txConstructorResult = res <&&> Just (lookups, c)}
 
-postMintingPolicyTx :: ToData datum => Address -> Versioned MintingPolicy -> Maybe datum -> Value -> State (TxConstructor a i o) ()
+postMintingPolicyTx :: ToData datum => Address -> Versioned MintingPolicy -> Maybe datum -> Value -> TransactionBuilder ()
 postMintingPolicyTx addr mp dat val = do
     constr <- get
     let res     = txConstructorResult constr
@@ -150,14 +160,14 @@ postMintingPolicyTx addr mp dat val = do
         lookups = mintingPolicy mp
     put constr { txConstructorResult = res <&&> Just (lookups, c)}
 
-referenceValidatorTx :: Validator -> TxOutRef -> State (TxConstructor a i o) ()
+referenceValidatorTx :: Validator -> TxOutRef -> TransactionBuilder ()
 referenceValidatorTx val txOutRef = do
     constr <- get
     let res     = txConstructorResult constr
         lookups = plutusV2OtherScript val
     put constr { txConstructorResult = res <&&> Just (lookups, mustReferenceOutput txOutRef) }
 
-referenceMintingPolicyTx :: ToData redeemer => MintingPolicy -> TxOutRef -> redeemer -> Value -> State (TxConstructor a i o) ()
+referenceMintingPolicyTx :: ToData redeemer => MintingPolicy -> TxOutRef -> redeemer -> Value -> TransactionBuilder ()
 referenceMintingPolicyTx mp txOutRef red v = do
     constr <- get
     let res     = txConstructorResult constr
@@ -165,15 +175,24 @@ referenceMintingPolicyTx mp txOutRef red v = do
         c       = mustMintValueWithRedeemer (Redeemer $ toBuiltinData red) v <> mustReferenceOutput txOutRef
     put constr { txConstructorResult = res <&&> Just (lookups, c) }
 
-datumTx :: ToData a => a -> State (TxConstructor a i o) ()
+datumTx :: ToData a => a -> TransactionBuilder ()
 datumTx a = do
     constr <- get
     let res = txConstructorResult constr
         dat = Datum $ toBuiltinData a
     put constr { txConstructorResult = res <&&> Just (otherData dat, mempty) }
 
-mustBeSignedByTx :: PaymentPubKeyHash -> State (TxConstructor a i o) ()
+mustBeSignedByTx :: PaymentPubKeyHash -> TransactionBuilder ()
 mustBeSignedByTx pkh = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <&&> Just (mempty, mustBeSignedBy pkh) }
+
+-- Ensures that transaction creator spends enough to auto-balance transaction
+prebalanceTx :: CoinSelectionBudget -> CoinSelectionParams -> TransactionBuilder ()
+prebalanceTx budget params = do
+    constr <- get
+    let resCoinSelection = genCoinSelection budget params (txConstructorLookups constr)
+    case resCoinSelection of
+      Nothing  -> failTx "balanceTx" "Cannot make coin selection." Nothing $> ()
+      Just sel -> utxosSpentPublicKeyTx (Map.keys sel)

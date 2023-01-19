@@ -30,9 +30,10 @@ common lang
 library
     import: lang
     exposed-modules:
+      Constraints.Balance
+      Constraints.CoinSelection
       Constraints.OffChain
       Constraints.OnChain
-      Constraints.Prebalance
       IO.ChainIndex
       IO.Time
       IO.Wallet
