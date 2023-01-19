@@ -27,8 +27,9 @@ import           Ledger                            (Params, Signature (..), card
 import           Ledger.Constraints                (UnbalancedTx)
 import           Ledger.Tx                         (CardanoTx (..), SomeCardanoApiTx (..))
 import           Plutus.Contract.Wallet            (ExportTx (..), export)
-import           Plutus.V1.Ledger.Bytes            (bytes)
-import           Plutus.V2.Ledger.Api              (fromBuiltin)
+import           Plutus.V1.Ledger.Bytes            (bytes, fromBytes)
+import           Plutus.V2.Ledger.Api              (fromBuiltin, toBuiltin)
+import           Text.Hex                          (decodeHex)
 
 ------------------------ Export/Import of transactions -------------------------
 
@@ -58,6 +59,12 @@ cardanoTxToSealedTx = \case
     _                            -> Nothing
 
 ------------------------ External keys and signatures -------------------------
+
+textToPubkey :: Text -> Maybe PubKey
+textToPubkey txt = PubKey . fromBytes <$> decodeHex txt
+
+textToSignature :: Text -> Maybe Signature
+textToSignature txt = Signature . toBuiltin <$> decodeHex txt
 
 addCardanoTxSignature :: PubKey -> Signature -> CardanoTx -> CardanoTx
 addCardanoTxSignature pubKey sig = cardanoTxMap addSignatureTx addSignatureCardano

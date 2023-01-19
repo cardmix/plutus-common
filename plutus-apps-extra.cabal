@@ -72,6 +72,7 @@ library
       freer-simple                           -any,
       from-sum                               -any,
       flat                                   -any,
+      hex-text                               -any,
       http-client                            -any,
       lens                                   -any,
       lens-aeson                             -any,

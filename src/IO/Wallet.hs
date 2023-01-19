@@ -30,7 +30,6 @@ import           Cardano.Wallet.Primitive.Types.Address             (AddressStat
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
-import           Control.Lens.Tuple                                 (_3)
 import           Control.Monad                                      (void, unless)
 import           Control.Monad.IO.Class                             (MonadIO(..))
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
@@ -50,18 +49,20 @@ import           Ledger                                             (Address, Ca
                                                                         PaymentPubKeyHash, TxOutRef, StakingCredential, Ada, Value,
                                                                         txOutValue, txOutAddress, getCardanoTxOutputs, _decoratedTxOutAddress)
 import qualified Ledger.Ada                                         as Ada
-import qualified Ledger.Value                                       as Value
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
+import           Ledger.Value                                       (leq)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
+import           PlutusTx.Prelude                                   (zero)
 import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
 import           Utils.ChainIndex                                   (MapUTXO)
 import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
+
 ------------------------------------------- Restore-wallet -------------------------------------------
 
 class (Monad m, MonadIO m) => HasWallet m where
@@ -153,7 +154,7 @@ getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
--- Get wallet total profit from Tx.
+-- Get wallet total profit from a transaction.
 getTxProfit :: HasWallet m => CardanoTx -> MapUTXO -> m Value
 getTxProfit tx txUtxos = do
         addrs <- ownAddresses
@@ -165,7 +166,7 @@ getTxProfit tx txUtxos = do
         getTotalValue addrs getValue getAddr = mconcat . map getValue . filter ((`elem` addrs) . getAddr)
 
 isProfitableTx :: HasWallet m => CardanoTx -> MapUTXO -> m Bool
-isProfitableTx tx txUtxos = all ((>= 0) . (^. _3)) . Value.flattenValue <$> getTxProfit tx txUtxos
+isProfitableTx tx txUtxos = leq zero <$> getTxProfit tx txUtxos
  
 ------------------------------------------- Tx functions -------------------------------------------
 
