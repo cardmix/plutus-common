@@ -44,7 +44,7 @@ import qualified Data.Text                                          as T
 import           Data.Text.Class                                    (FromText(fromText))
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
-import           Ledger                                             (Address, CardanoTx (..), Params (..), PaymentPubKeyHash, StakePubKeyHash, TxOutRef, StakingCredential)
+import           Ledger                                             (Address, CardanoTx (..), Params (..), PaymentPubKeyHash, TxOutRef, StakingCredential)
 import           Ledger.Ada                                         (lovelaceValueOf)
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
@@ -53,7 +53,7 @@ import           Ledger.Tx.CardanoAPI                               (unspentOutp
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
-import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
+import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
 import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
@@ -122,14 +122,14 @@ getWalletAddr = do
     addrWalletBech32 <- getWalletAddrBech32
     pure $ case bech32ToAddress <$> fromText addrWalletBech32 of
         Right (Just addr) -> addr
-        _                 -> error $ "Can't get wallet address from bech32: " <> T.unpack addrWalletBech32
+        _                 -> error $ "Cannot get wallet address from bech32: " <> T.unpack addrWalletBech32
 
-getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakePubKeyHash)
+getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakingCredential)
 getWalletKeyHashes = do
-    addrWalletBech32 <- getWalletAddrBech32
-    pure $ case bech32ToKeyHashes <$> fromText addrWalletBech32 of
-        Right (Just hashes) -> hashes
-        _                   -> error $ "Can't get wallet key hashes from bech32: " <> T.unpack addrWalletBech32
+    addrWallet <- getWalletAddr
+    pure $ case addressToKeyHashes addrWallet of
+        Just hs -> hs
+        Nothing -> error $ "The address does not correspond to a public key: " <> show addrWallet
 
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
 getWalletFromId = getFromEndpointWallet . Client.getWallet Client.walletClient . ApiT
