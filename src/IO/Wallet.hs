@@ -30,13 +30,14 @@ import           Cardano.Wallet.Primitive.Types.Address             (AddressStat
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
+import           Control.Lens.Tuple                                 (_3)
 import           Control.Monad                                      (void, unless)
 import           Control.Monad.IO.Class                             (MonadIO(..))
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
 import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
 import qualified Data.ByteString.Lazy                               as LB
 import           Data.Coerce                                        (coerce)
-import           Data.Map                                           (keys)
+import qualified Data.Map                                           as Map
 import           Data.Maybe                                         (mapMaybe)
 import           Data.String                                        (IsString(..))
 import           Data.Text                                          (Text)
@@ -44,8 +45,12 @@ import qualified Data.Text                                          as T
 import           Data.Text.Class                                    (FromText(fromText))
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
-import           Ledger                                             (Address, CardanoTx (..), Params (..), PaymentPubKeyHash, TxOutRef, StakingCredential)
-import           Ledger.Ada                                         (lovelaceValueOf)
+import           IO.ChainIndex                                      (getUtxosAt)
+import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..),
+                                                                        PaymentPubKeyHash, TxOutRef, StakingCredential, Ada, Value,
+                                                                        txOutValue, txOutAddress, getCardanoTxOutputs, _decoratedTxOutAddress)
+import qualified Ledger.Ada                                         as Ada
+import qualified Ledger.Value                                       as Value
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
@@ -54,9 +59,9 @@ import           Network.HTTP.Client                                (HttpExcepti
 import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
 import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
+import           Utils.ChainIndex                                   (MapUTXO)
 import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
-
 ------------------------------------------- Restore-wallet -------------------------------------------
 
 class (Monad m, MonadIO m) => HasWallet m where
@@ -107,13 +112,10 @@ getFromEndpointWallet = getFromEndpointOnPort 8090
 pattern WalletApiConnectionError :: Request -> HttpExceptionContent -> ConnectionError
 pattern WalletApiConnectionError req content <- ConnectionErrorOnPort 8090 req content
 
--- Important note: this function only takes first used addres from the list, 
--- while the one with the highest UTXO's sum on it may be preferred.
--- Maybe later we should add a check for the UTXO's sum on each used address and select one with the maximum amount.
 getWalletAddrBech32 :: HasWallet m => m Text
 getWalletAddrBech32 = do
     walletId <- getWalletId
-    getFromEndpointWallet (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Used)) >>= \case
+    getFromEndpointWallet (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Unused)) >>= \case
         v:_ -> pure $ v ^. key "id"._String
         _   -> error $  "There are no addresses associated with this wallet ID:\n" <> show walletId
 
@@ -143,6 +145,28 @@ ownAddressesBech32 = do
     as <- getFromEndpointWallet $ Client.listAddresses  Client.addressClient (ApiT walletId) Nothing
     pure $ map (^. key "id"._String) as
 
+-- Get all ada at a wallet
+getWalletAda :: HasWallet m => m Ada 
+getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
+
+-- Get all utxos at a wallet
+getWalletUtxos :: HasWallet m => m MapUTXO
+getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
+
+-- Get wallet total profit from Tx.
+getTxProfit :: HasWallet m => CardanoTx -> MapUTXO -> m Value
+getTxProfit tx txUtxos = do
+        addrs <- ownAddresses
+        let txOuts = Map.elems txUtxos
+            spent  = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress txOuts
+            income = getTotalValue addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
+        pure $ spent <> income
+    where
+        getTotalValue addrs getValue getAddr = mconcat . map getValue . filter ((`elem` addrs) . getAddr)
+
+isProfitableTx :: HasWallet m => CardanoTx -> MapUTXO -> m Bool
+isProfitableTx tx txUtxos = all ((>= 0) . (^. _3)) . Value.flattenValue <$> getTxProfit tx txUtxos
+ 
 ------------------------------------------- Tx functions -------------------------------------------
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
@@ -222,11 +246,11 @@ getWalletTxOutRefs params pkh mbSkc n = do
     submitTxConfirmed signedTx
     let refs = case signedTx of
             EmulatorTx _    -> error "Can not get TxOutRef's from EmulatorTx."
-            CardanoApiTx tx -> keys $ unspentOutputsTx tx
+            CardanoApiTx tx -> Map.keys $ unspentOutputsTx tx
     liftIO $ putStrLn "Submitted!"
     return refs
     where
         lookups = mempty :: ScriptLookups Void
         cons    = case mbSkc of
-            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skc $ lovelaceValueOf 10_000_000
-            Nothing -> mustPayToPubKey pkh $ lovelaceValueOf 10_000_000
+            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skc $ Ada.lovelaceValueOf 10_000_000
+            Nothing -> mustPayToPubKey pkh $ Ada.lovelaceValueOf 10_000_000

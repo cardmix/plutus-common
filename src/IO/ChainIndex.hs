@@ -22,23 +22,18 @@ import           Control.Applicative               (Applicative(..))
 import           Control.Monad.Extra               (mconcatMapM)
 import           Control.Monad.IO.Class            (MonadIO(..))
 import           Data.Default                      (Default (def))
-import           Data.Functor                      ((<&>))
 import           Data.Map                          (Map)
 import qualified Data.Map                          as Map
 import           GHC.Generics                      (Generic)
 import           IO.Time                           (currentTime)
-import           IO.Wallet                         (HasWallet, ownAddresses)
-import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime, Ada, CardanoTx,
-                                                    getCardanoTxInputs, txOutValue, txOutAddress, getCardanoTxOutputs,
-                                                    TxIn (..), _decoratedTxOutAddress)
-import qualified Ledger.Ada                        as Ada
+import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime)
 import           Network.HTTP.Client               (HttpExceptionContent, Request)
 import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
 import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
 import qualified Plutus.ChainIndex.Client          as Client
 import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
-import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap, mapM, mconcat)
+import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap)
 import           Utils.ChainIndex                  (MapUTXO)
 import           Utils.Servant                     (pattern ConnectionErrorOnPort, getFromEndpointOnPort, Endpoint, ConnectionError)
 
@@ -77,14 +72,6 @@ getFromEndpointChainIndex = getFromEndpointOnPort 9083
 
 pattern ChainIndexConnectionError :: Request -> HttpExceptionContent -> ConnectionError
 pattern ChainIndexConnectionError req content <- ConnectionErrorOnPort 9083 req content
-
--- Get all ada at a wallet
-getWalletAda :: HasWallet m => m Ada 
-getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
-
--- Get all utxos at a wallet
-getWalletUtxos :: HasWallet m => m MapUTXO
-getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
@@ -136,18 +123,3 @@ unspentTxOutFromRef = getFromEndpointChainIndex . Client.getUnspentTxOut
 utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse
 utxoRefsAt pageQ =
     getFromEndpointChainIndex . Client.getUtxoSetAtAddress . UtxoAtAddressRequest (Just pageQ) . addressCredential
-
--- Get wallet total ada profit from Tx.
-getTxAdaProfit :: HasWallet m => CardanoTx -> m Ada
-getTxAdaProfit tx = do
-        addrs <- ownAddresses
-        let spentRefs = map txInRef $ getCardanoTxInputs tx
-        spentTxOuts <- getFromEndpointChainIndex $ mapM Client.getUnspentTxOut spentRefs
-        let spent  = filterWalletAda addrs _decoratedTxOutValue _decoratedTxOutAddress spentTxOuts
-            income = filterWalletAda addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
-        pure $ income - spent
-    where
-        filterWalletAda addrs getValue getAddr = sum . map (Ada.fromValue . getValue) . filter ((`elem` addrs) . getAddr)
-
-isProfitableTx :: HasWallet m => CardanoTx -> m Bool
-isProfitableTx tx = (>= 0) <$> getTxAdaProfit tx
