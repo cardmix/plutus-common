@@ -26,6 +26,7 @@ import           Prelude                          (Semigroup, (<>), mempty)
 
 import           Constraints.CoinSelection        (CoinSelectionBudget, CoinSelectionParams, genCoinSelection)
 import           Types.Tx                         (TxConstructor (..), TxConstructorError (..), TransactionBuilder)
+import Utils.ChainIndex (MapUTXO)
 
 (<&&>) :: (Semigroup a, Monad m) => m a -> m a -> m a
 (<&&>) = liftM2 (<>)
@@ -189,10 +190,7 @@ mustBeSignedByTx pkh = do
     put constr { txConstructorResult = res <&&> Just (mempty, mustBeSignedBy pkh) }
 
 -- Ensures that transaction creator spends enough to auto-balance transaction
-prebalanceTx :: CoinSelectionBudget -> CoinSelectionParams -> TransactionBuilder ()
-prebalanceTx budget params = do
-    constr <- get
-    let resCoinSelection = genCoinSelection budget params (txConstructorLookups constr)
-    case resCoinSelection of
-      Nothing  -> failTx "balanceTx" "Cannot make coin selection." Nothing $> ()
+prebalanceTx :: CoinSelectionBudget -> CoinSelectionParams -> MapUTXO -> TransactionBuilder ()
+prebalanceTx budget params walletUTXO = case genCoinSelection budget params walletUTXO of
+      Nothing  -> failTx "balanceTx" "Cannot make a coin selection." Nothing $> ()
       Just sel -> utxosSpentPublicKeyTx (Map.keys sel)
