@@ -12,12 +12,12 @@
 module Types.Error where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
+import           Control.Exception                (Exception)
+import           Control.Monad.Catch              (MonadThrow (..))
 import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
+import           Network.HTTP.Client              (Request, HttpExceptionContent)
 import           Prelude                          
-import Control.Exception (Exception)
-import Network.HTTP.Client (Request, HttpExceptionContent)
-import Control.Monad.Catch (MonadThrow (..))
 
 data ConnectionError = ConnectionError Request HttpExceptionContent
     deriving (Show, Exception)
