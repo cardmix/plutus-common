@@ -58,7 +58,8 @@ import           Ledger.Tx.CardanoAPI                               (unspentOutp
 import           Ledger.Value                                       (leq)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
 import           PlutusTx.IsData                                    (ToData, FromData)
-import           PlutusTx.Prelude                                   (zero)
+import           PlutusTx.Prelude                                   ((-), zero)
+import           Prelude                                            hiding ((-))
 
 import           Types.Error                                        (ConnectionError)
 import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
@@ -161,10 +162,10 @@ getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 getTxProfit :: HasWallet m => CardanoTx -> MapUTXO -> m Value
 getTxProfit tx txUtxos = do
         addrs <- ownAddresses
-        let txOuts = Map.elems txUtxos
-            spent  = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress txOuts
-            income = getTotalValue addrs txOutValue (toPlutusAddress . txOutAddress) $ getCardanoTxOutputs tx
-        pure $ spent <> income
+        let txOuts   = Map.elems txUtxos
+            spent    = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress txOuts
+            produced = getTotalValue addrs txOutValue (toPlutusAddress . txOutAddress) $ getCardanoTxOutputs tx
+        pure $ produced - spent
     where
         getTotalValue addrs getValue getAddr = mconcat . map getValue . filter ((`elem` addrs) . getAddr)
 
