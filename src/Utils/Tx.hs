@@ -10,26 +10,27 @@
 
 module Utils.Tx where
 
-import           Cardano.Api.Shelley               (EraInMode (..), AsType (..), SerialiseAsCBOR (..), InAnyCardanoEra (..),
-                                                    ConsensusMode (..), AnyCardanoEra (..), CardanoEra (..), toEraInMode, Tx (..))
-import qualified Cardano.Crypto.DSIGN              as Crypto
-import qualified Cardano.Ledger.Alonzo.TxWitness   as Wits
-import           Cardano.Ledger.Babbage.Tx         (ValidatedTx(ValidatedTx))
-import           Cardano.Ledger.Shelley.API        (WitVKey(WitVKey), VKey(VKey))
-import           Cardano.Wallet.Api.Types          (ApiSerialisedTransaction(..), getApiT)
-import           Cardano.Wallet.Primitive.Types.Tx (SealedTx, sealedTxFromCardano', cardanoTxIdeallyNoLaterThan)
-import           Control.FromSum                   (fromMaybe, eitherToMaybe)                   
-import           Control.Lens                      (At (at), (&), (?~))
-import           Data.Aeson.Extras                 (encodeByteString, tryDecode)
-import qualified Data.Set                          as Set
-import           Data.Text                         (Text)
-import           Ledger                            (Params, Signature (..), cardanoTxMap, signatures, PubKey (..))
-import           Ledger.Constraints                (UnbalancedTx)
-import           Ledger.Tx                         (CardanoTx (..), SomeCardanoApiTx (..))
-import           Plutus.Contract.Wallet            (ExportTx (..), export)
-import           Plutus.V1.Ledger.Bytes            (bytes, fromBytes)
-import           Plutus.V2.Ledger.Api              (fromBuiltin, toBuiltin)
-import           Text.Hex                          (decodeHex)
+import           Cardano.Api.Shelley                 (EraInMode (..), AsType (..), SerialiseAsCBOR (..), InAnyCardanoEra (..),
+                                                        ConsensusMode (..), AnyCardanoEra (..), CardanoEra (..), toEraInMode, Tx (..))
+import qualified Cardano.Crypto.DSIGN                as Crypto
+import qualified Cardano.Ledger.Alonzo.TxWitness     as Wits
+import           Cardano.Ledger.Babbage.Tx           (ValidatedTx(ValidatedTx))
+import           Cardano.Ledger.Shelley.API          (WitVKey(WitVKey), VKey(VKey))
+import           Cardano.Node.Emulator.Params        (Params)
+import           Cardano.Wallet.Api.Types            (ApiSerialisedTransaction(..), getApiT)
+import           Cardano.Wallet.LocalClient.ExportTx (ExportTx (..), export)
+import           Cardano.Wallet.Primitive.Types.Tx   (SealedTx, sealedTxFromCardano', cardanoTxIdeallyNoLaterThan)
+import           Control.FromSum                     (fromMaybe, eitherToMaybe)                   
+import           Control.Lens                        (At (at), (&), (?~))
+import           Data.Aeson.Extras                   (encodeByteString, tryDecode)
+import qualified Data.Set                            as Set
+import           Data.Text                           (Text)
+import           Ledger                              (Signature (..), PubKey (..), cardanoTxMap, signatures)
+import           Ledger.Constraints                  (UnbalancedTx)
+import           Ledger.Tx                           (CardanoTx (..), SomeCardanoApiTx (..))
+import           Plutus.V1.Ledger.Bytes              (bytes, fromBytes)
+import           Plutus.V2.Ledger.Api                (fromBuiltin, toBuiltin)
+import           Text.Hex                            (decodeHex)
 
 ------------------------ Export/Import of transactions -------------------------
 

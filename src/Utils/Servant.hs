@@ -2,7 +2,6 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 module Utils.Servant where
 
@@ -12,11 +11,9 @@ import           Control.Monad.IO.Class            (MonadIO(..))
 import           Servant.Client                    (mkClientEnv, runClientM, ClientM, BaseUrl(..), Scheme(..))
 import qualified Servant.Client                    as Servant
 import           Network.HTTP.Client               (newManager, defaultManagerSettings, HttpException(..), Request(port), HttpExceptionContent)
+import           Types.Error                       (ConnectionError(..))
 
 type Endpoint a = forall m. MonadIO m => ClientM a -> m a
-
-data ConnectionError = ConnectionError Request HttpExceptionContent
-    deriving (Show, Exception)
 
 getFromEndpointOnPort :: Int -> Endpoint a
 getFromEndpointOnPort p endpoint = liftIO $ do

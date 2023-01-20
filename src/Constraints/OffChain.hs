@@ -10,23 +10,23 @@
 
 module Constraints.OffChain where
 
-import           Control.Monad                    (Monad, liftM2, when)
-import           Control.Monad.State              (MonadState (..))
-import           Data.Functor                     (($>))
-import qualified Data.Map                         as Map
-import           Data.Maybe                       (fromJust)
-import           Data.Text                        (Text)
-import           Ledger                           (Versioned, mintingPolicyHash, validatorHash, interval, DecoratedTxOut)
-import           Ledger.Address                   (PaymentPubKeyHash)
+import           Control.Monad                       (Monad, liftM2, when)
+import           Control.Monad.State                 (MonadState (..))
+import           Data.Functor                        (($>))
+import qualified Data.Map                            as Map
+import           Data.Maybe                          (fromJust)
+import           Data.Text                           (Text)
+import           Ledger                              (DecoratedTxOut, Versioned, mintingPolicyHash, validatorHash)
+import           Ledger.Address                      (PaymentPubKeyHash)
+import           Ledger.Constraints.OffChain         (unspentOutputs, plutusV2MintingPolicy, plutusV2OtherScript, otherData, mintingPolicy, otherScript)
 import           Ledger.Constraints.TxConstraints
-import           Ledger.Constraints.OffChain      (unspentOutputs, plutusV2MintingPolicy, plutusV2OtherScript, otherData, mintingPolicy, otherScript)
+import           Ledger.Constraints.ValidityInterval (interval)
 import           Plutus.V2.Ledger.Api
-import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mconcat, mempty)
-import           Prelude                          (Semigroup, (<>), mempty)
+import           PlutusTx.Prelude                    hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mconcat, mempty)
+import           Prelude                             (Semigroup, (<>), mempty)
 
-import           Constraints.CoinSelection        (CoinSelectionBudget, CoinSelectionParams, genCoinSelection)
-import           Types.Tx                         (TxConstructor (..), TxConstructorError (..), TransactionBuilder)
-import Utils.ChainIndex (MapUTXO)
+import           Types.Error                         (TxBuilderError(..))
+import           Types.Tx                            (TxConstructor (..), TransactionBuilder)
 
 (<&&>) :: (Semigroup a, Monad m) => m a -> m a -> m a
 (<&&>) = liftM2 (<>)
@@ -38,7 +38,7 @@ failTx eIn eReason r = if isJust r
     else do
         constr <- get
         let errorList = txConstructorErrors constr
-        put constr { txConstructorErrors = TxConstructorError eIn eReason : errorList, txConstructorResult = Nothing }
+        put constr { txConstructorErrors = TxBuilderError eIn eReason : errorList, txConstructorResult = Nothing }
         return r
 
 utxosSpentPublicKeyTx :: [TxOutRef] -> TransactionBuilder ()
@@ -138,7 +138,7 @@ validatedInIntervalTx startTime endTime = do
         res  = txConstructorResult constr
         cond = startTime <= ct &&  ct <= endTime
     if cond
-        then put constr { txConstructorResult = res <&&> Just (mempty, mustValidateIn $ interval startTime endTime) }
+        then put constr { txConstructorResult = res <&&> Just (mempty, mustValidateInTimeRange $ interval startTime endTime) }
         else do
             _ <- failTx "validatedInIntervalTx" "Current time is not in the interval" Nothing
             return ()
@@ -188,9 +188,3 @@ mustBeSignedByTx pkh = do
     constr <- get
     let res = txConstructorResult constr
     put constr { txConstructorResult = res <&&> Just (mempty, mustBeSignedBy pkh) }
-
--- Ensures that transaction creator spends enough to auto-balance transaction
-prebalanceTx :: CoinSelectionBudget -> CoinSelectionParams -> MapUTXO -> TransactionBuilder ()
-prebalanceTx budget params walletUTXO = case genCoinSelection budget params walletUTXO of
-      Nothing  -> failTx "balanceTx" "Cannot make a coin selection." Nothing $> ()
-      Just sel -> utxosSpentPublicKeyTx (Map.keys sel)

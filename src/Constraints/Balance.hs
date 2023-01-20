@@ -11,54 +11,49 @@
 module Constraints.Balance where
 
 import           Cardano.Api                  (EraInMode(..))
-import           Data.Either.Extra            (eitherToMaybe)
-import qualified Data.Map                     as Map
-import           Data.Maybe                   (fromMaybe)
-import           Ledger                       (CardanoTx (..), SomeCardanoApiTx (..), toTxOut, Address)
+import           Cardano.Node.Emulator        (Params (..))
+import           Cardano.Node.Emulator.Fee    (makeAutoBalancedTransactionWithUtxoProvider, utxoProviderFromWalletOutputs)
+import           Control.Monad.Catch          (MonadThrow(..))
+import           Ledger                       (CardanoTx (..), SomeCardanoApiTx (..), Address)
 import           Ledger.Constraints           (UnbalancedTx (..), ScriptLookups (..), mkTxWithParams, TxConstraints)
-import           Ledger.Fee                   (makeAutoBalancedTransaction)
 import           Ledger.Index                 (UtxoIndex(..))
-import           Ledger.Params                (Params (..))
-import           Ledger.Tx.CardanoAPI         (toCardanoTxBodyContent)
+import           Ledger.Tx.CardanoAPI         (toCardanoTxBodyContent, toCardanoAddressInEra)
 import           Ledger.Typed.Scripts         (ValidatorTypes(..), Any)
-import           Ledger.Validation            (UTxO, EmulatorEra, fromPlutusIndex)
 import           Prelude
 
-import           Constraints.CoinSelection    (CoinSelectionParams, CoinSelectionBudget)
-import           Constraints.OffChain         (prebalanceTx)
-import           Types.Tx                     (TransactionBuilder)
-import           Utils.ChainIndex             (MapUTXO)
+import           Types.Error                  (TxBalancingError(UnbuildableTx), throwEither)
+import           Utils.ChainIndex             (MapUTXO, toCardanoUtxo)
 
--- A helper function to convert our MapUTXO type to UTxO type from Ledger.Validation
--- TODO: add better error handling
-toCardanoUTXO :: Params -> MapUTXO -> UTxO EmulatorEra
-toCardanoUTXO params utxos =
-        let handleError msg = fromMaybe (error msg) . eitherToMaybe
-            msg1 = "toTxOut: Failed to convert a DecoratedTxOut to TxOut."
-            msg2 = "fromPlutusIndex: Failed to convert a UtxoIndex to UTxO EmulatorEra."
-            index = UtxoIndex $ Map.map (handleError msg1 . toTxOut (pNetworkId params)) utxos
-        in handleError msg2 $ fromPlutusIndex index
-
-addPrebalanceTx :: CoinSelectionBudget -> CoinSelectionParams -> MapUTXO -> TransactionBuilder () -> TransactionBuilder ()
-addPrebalanceTx budget params utxos builder = builder >> prebalanceTx budget params utxos
-
--- TODO: add better error handling
-balanceExternalTx :: (Monad m) => Params
-                  -> ScriptLookups Any
-                  -> TxConstraints (RedeemerType Any) (DatumType Any)
+-- TODO: use different errors for each failable computation
+balanceExternalTx :: (MonadThrow m)
+                  => Params
                   -> MapUTXO
                   -> Address
+                  -> ScriptLookups Any
+                  -> TxConstraints (RedeemerType Any) (DatumType Any)
                   -> m CardanoTx
-balanceExternalTx params lookups cons walletUTXO changeAddress = do
-    let handleError msg = fromMaybe (error msg) . eitherToMaybe
-        msg1 = "mkTxWithParams: Cannot make an UnbalancedTx."
-        msg2 = "toCardanoTxBodyContent: Cannot get a CardanoBuildTx from Tx."
-        msg3 = "makeAutoBalancedTransaction: Cannot auto-balance a transaction."
+balanceExternalTx params walletUTXO changeAddress lookups cons = do
+    utx <- throwEither UnbuildableTx $ mkTxWithParams params lookups cons
 
-    let utx = handleError msg1 $ mkTxWithParams params lookups cons
-        cardanoBuildTx = case utx of
-            UnbalancedEmulatorTx etx _ _ -> handleError msg2 $ toCardanoTxBodyContent params [] etx
-            UnbalancedCardanoTx cbt _    -> cbt
-        utxosCardano = toCardanoUTXO params walletUTXO
-        tx = handleError msg3 $ makeAutoBalancedTransaction params utxosCardano cardanoBuildTx changeAddress
+    cardanoBuildTx <- case utx of
+            UnbalancedEmulatorTx etx _ _ -> throwEither UnbuildableTx $
+                toCardanoTxBodyContent (pNetworkId params) (emulatorPParams params) [] etx
+            UnbalancedCardanoTx cbt _    -> pure cbt
+
+    utxoIndex <- UtxoIndex <$> toCardanoUtxo params (slTxOutputs lookups)
+
+    cAddress <- throwEither UnbuildableTx $ toCardanoAddressInEra (pNetworkId params) changeAddress
+
+    walletUTXOIndex <- toCardanoUtxo params walletUTXO
+
+    let utxoProvider = throwEither UnbuildableTx . utxoProviderFromWalletOutputs walletUTXOIndex
+
+    tx <- makeAutoBalancedTransactionWithUtxoProvider
+            params
+            utxoIndex
+            cAddress
+            utxoProvider
+            (const $ throwM UnbuildableTx)
+            cardanoBuildTx
+
     return $ CardanoApiTx $ SomeTx tx BabbageEraInCardanoMode

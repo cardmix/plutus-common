@@ -13,7 +13,6 @@ module Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
 import           Control.Monad.State              (State, execState)
-import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
@@ -21,21 +20,15 @@ import           Ledger.Typed.Scripts             (ValidatorTypes (..), Any)
 import           Plutus.V2.Ledger.Api             (POSIXTime)
 import           PlutusTx.Prelude                 hiding (Semigroup, (<$>), mempty, unless, mapMaybe, toList, fromInteger)
 import           Prelude                          (Show, Monoid (mempty))
-import qualified Prelude                          as Haskell
-import           Utils.ChainIndex                 (MapUTXO)
 
-data TxConstructorError = TxConstructorError
-    {
-        txConstructorErrorIn     :: Text,
-        txConstructorErrorReason :: Text
-    }
-    deriving (Show, Haskell.Eq, Generic, FromJSON, ToJSON)
+import           Types.Error                      (TxBuilderError)
+import           Utils.ChainIndex                 (MapUTXO)
 
 data TxConstructor a i o = TxConstructor
     {
         txCurrentTime          :: POSIXTime,
         txConstructorLookups   :: MapUTXO,
-        txConstructorErrors    :: [TxConstructorError],
+        txConstructorErrors    :: [TxBuilderError],
         txConstructorResult    :: Maybe (ScriptLookups a, TxConstraints i o)
     }
     deriving (Show, Generic, FromJSON, ToJSON)

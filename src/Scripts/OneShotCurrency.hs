@@ -21,7 +21,6 @@
 
 {-# HLINT ignore "Use uncurry"            #-}
 
-
 -- | Implements a custom currency with a minting policy that allows
 --   the minting of a fixed amount of units.
 module Scripts.OneShotCurrency (
@@ -39,8 +38,9 @@ module Scripts.OneShotCurrency (
 import           Data.Aeson                             (FromJSON, ToJSON)
 import           GHC.Generics                           (Generic)
 import           Ledger                                 (DecoratedTxOut)
+import           Ledger.Typed.Scripts                   (mkUntypedMintingPolicy)
 import           Plutus.Script.Utils.V2.Scripts         (MintingPolicy, scriptCurrencySymbol)
-import           Plutus.Script.Utils.V2.Typed.Scripts   (mkUntypedMintingPolicy)
+-- import           Plutus.Script.Utils.V2.Typed.Scripts   (mkUntypedMintingPolicy)
 import           Plutus.V2.Ledger.Api                   (CurrencySymbol, TokenName, Value, TxOutRef (..),
                                                             ScriptContext (..), TxInfo (..), mkMintingPolicyScript, singleton)
 import           Plutus.V2.Ledger.Contexts              (ownCurrencySymbol, spendsOutput)

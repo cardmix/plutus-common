@@ -1,12 +1,12 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DerivingStrategies  #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE NoImplicitPrelude   #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 
 module Utils.Address where
 
@@ -34,6 +34,8 @@ addressToKeyHashes addr = do
     pure (PaymentPubKeyHash pkh, stakingCredential addr)
 
 ----------------------------------- Bech32 conversions -----------------------------------------
+
+-- TODO: simplify address conversions using the new Plutus.Ledger functions
 
 -- Extract key hashes from bech32 Shelley/Byron address
 bech32ToKeyHashes :: Text -> Maybe (PaymentPubKeyHash, Maybe StakingCredential)
