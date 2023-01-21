@@ -93,7 +93,7 @@ utxoSpentScriptTx' f scriptVal red = do
                 mutxo'  = find (\(_, o) -> _decoratedTxOutReferenceScript o == Just script) $ Map.toList utxos
                 lookups = case mutxo' of
                     Nothing    -> unspentOutputs (Map.fromList [utxo]) <> otherScript val
-                    Just utxo' -> unspentOutputs (Map.fromList [utxo, utxo'])
+                    Just utxo' -> unspentOutputs (Map.fromList [utxo, utxo']) <> otherScript val
                 cons    = case mutxo' of
                     Nothing    -> mustSpendScriptOutput ref r
                     Just utxo' -> mustSpendScriptOutputWithReference ref r (fst utxo')
@@ -154,7 +154,7 @@ tokensMintedTx mp red v = do
         mutxo   = find (\(_, o) -> _decoratedTxOutReferenceScript o == Just script) $ Map.toList utxos
         lookups = case mutxo of
             Nothing   -> mintingPolicy mp
-            Just utxo -> unspentOutputs (Map.fromList [utxo])
+            Just utxo -> mintingPolicy mp <> unspentOutputs (Map.fromList [utxo])
         cons    = mustMintValueWithRedeemerAndReference (Redeemer $ toBuiltinData red) (fst <$> mutxo) v
     put constr { txConstructorResult = res <&&> Just (lookups,  cons)}
 
