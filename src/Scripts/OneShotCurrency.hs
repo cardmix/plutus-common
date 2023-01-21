@@ -37,10 +37,9 @@ module Scripts.OneShotCurrency (
 
 import           Data.Aeson                             (FromJSON, ToJSON)
 import           GHC.Generics                           (Generic)
-import           Ledger                                 (DecoratedTxOut)
+import           Ledger                                 (DecoratedTxOut, Versioned (..), Language (..))
 import           Ledger.Typed.Scripts                   (mkUntypedMintingPolicy)
 import           Plutus.Script.Utils.V2.Scripts         (MintingPolicy, scriptCurrencySymbol)
--- import           Plutus.Script.Utils.V2.Typed.Scripts   (mkUntypedMintingPolicy)
 import           Plutus.V2.Ledger.Api                   (CurrencySymbol, TokenName, Value, TxOutRef (..),
                                                             ScriptContext (..), TxInfo (..), mkMintingPolicyScript, singleton)
 import           Plutus.V2.Ledger.Contexts              (ownCurrencySymbol, spendsOutput)
@@ -117,5 +116,5 @@ currencyValue cur = oneShotCurrencyValue (currencySymbol cur) cur
 -- Constraints that the OneShotCurrency is minted in the transaction
 oneShotCurrencyMintTx :: OneShotCurrencyParams -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 oneShotCurrencyMintTx par@(OneShotCurrencyParams ref _) = do
-    tokensMintedTx (oneShotCurrencyPolicy par) () (currencyValue par)
+    tokensMintedTx (flip Versioned PlutusV2 $ oneShotCurrencyPolicy par) () (currencyValue par)
     utxoSpentPublicKeyTx (\r _ -> r == ref)
