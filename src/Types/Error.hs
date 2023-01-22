@@ -37,5 +37,13 @@ data TxBuilderError = TxBuilderError
 data MkTxError = UnbuildableTx
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
+data BalanceExternalTxError 
+    = MakeUnbalancedTxError
+    | MakeBuildTxFromEmulatorTxError
+    | NonBabbageEraChangeAddress
+    | MakeUtxoProviderError
+    | MakeAutoBalancedTxError
+    deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
+
 throwEither :: (MonadThrow m, Exception e) => e -> Either b a -> m a
 throwEither e = either (const $ throwM e) pure
