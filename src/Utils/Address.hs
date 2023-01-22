@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,20 +10,13 @@
 module Utils.Address where
 
 import           Data.Text                       (Text)
-import           Data.Foldable                   (asum)
-import           Cardano.Api.Shelley             (AsType (..), StakeAddress(..),
-                                                  deserialiseFromBech32)
-import           Cardano.Chain.Common            (decodeAddressBase58)
+import           Cardano.Api.Shelley             (AsType(..), StakeAddress(..), shelleyAddressInEra, ShelleyEra, SerialiseAddress(..), 
+                                                  byronAddressInEra)
 import           Cardano.Ledger.Alonzo.TxInfo    (transKeyHash)
-import           Cardano.Ledger.Address          (BootstrapAddress (BootstrapAddress), bootstrapKeyHash)
 import qualified Cardano.Ledger.Credential       as Shelley
-import           Cardano.Ledger.Crypto           (StandardCrypto)
-import           Control.FromSum                 (eitherToMaybe)
-import           Ledger                          (StakingCredential)
-import           Ledger.Address                  (PaymentPubKeyHash(..), StakePubKeyHash(..), Address(..),
-                                                    pubKeyHashAddress, toPubKeyHash, stakingCredential)
-import           Ledger.Tx.CardanoAPI            (fromCardanoAddress)
-import           PlutusTx.Prelude                hiding (asum, error)
+import           Control.Applicative             ((<|>))
+import           Ledger                          (StakingCredential, toPlutusAddress)
+import           Ledger.Address                  (PaymentPubKeyHash(..), StakePubKeyHash(..), Address(..), toPubKeyHash, stakingCredential)
 
 ---------------------------- Address to keyhashes conversions ----------------------------------
 
@@ -45,22 +37,15 @@ bech32ToKeyHashes txt = do
 
 -- Convert bech32 Shelley/Byron address to Plutus Address
 bech32ToAddress :: Text -> Maybe Address
-bech32ToAddress txt = asum $ map ($ txt) [bech32ToShelley, bech32ToByron]
-
-bech32ToShelley :: Text -> Maybe Address
-bech32ToShelley txt = do
-    sAddr <- eitherToMaybe (deserialiseFromBech32 AsShelleyAddress txt)
-    Just $ fromCardanoAddress sAddr
-
-bech32ToByron :: Text -> Maybe Address
-bech32ToByron txt =  fromByron <$> eitherToMaybe (decodeAddressBase58 txt)
+bech32ToAddress txt = toPlutusAddress <$> (shelleyAddr <|> byronAddr)
     where
-        fromByron = flip pubKeyHashAddress Nothing . PaymentPubKeyHash . transKeyHash . bootstrapKeyHash @StandardCrypto . BootstrapAddress
+        shelleyAddr = shelleyAddressInEra @ShelleyEra <$> deserialiseAddress AsShelleyAddress txt
+        byronAddr = byronAddressInEra <$> deserialiseAddress AsByronAddress txt
 
 -- Convert bech32 Stake address to a Plutus StakePubKeyHash.
 bech32ToStakePubKeyHash :: Text -> Maybe StakePubKeyHash
 bech32ToStakePubKeyHash txt = do
-    StakeAddress _ payCred <- either (const Nothing) Just $ deserialiseFromBech32 AsStakeAddress txt
+    StakeAddress _ payCred <- deserialiseAddress AsStakeAddress txt
     case payCred of
             Shelley.ScriptHashObj _  -> Nothing
             Shelley.KeyHashObj kHash -> Just $ StakePubKeyHash $ transKeyHash kHash
