@@ -9,7 +9,7 @@ import qualified Data.Map                     as Map
 import           Ledger                       (TxOutRef(..), DecoratedTxOut(..), TxOut, toTxOut)
 import           Ledger.Value                 (adaOnlyValue)
 
-import           Types.Error                  (throwEither, TxBalancingError (..))
+import           Types.Error                  (throwEither, MkTxError(..))
 
 type MapUTXO = Map.Map TxOutRef DecoratedTxOut
 

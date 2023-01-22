@@ -29,7 +29,7 @@ data TxBuilderError = TxBuilderError
     }
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
-data TxBalancingError = UnbuildableTx
+data MkTxError = UnbuildableTx
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
 throwEither :: (MonadThrow m, Exception e) => e -> Either b a -> m a

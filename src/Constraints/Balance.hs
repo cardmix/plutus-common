@@ -20,8 +20,7 @@ import           Ledger.Index                 (UtxoIndex(..))
 import           Ledger.Tx.CardanoAPI         (toCardanoTxBodyContent, toCardanoAddressInEra)
 import           Ledger.Typed.Scripts         (ValidatorTypes(..), Any)
 import           Prelude
-
-import           Types.Error                  (TxBalancingError(UnbuildableTx), throwEither)
+import           Types.Error                  (MkTxError(..), throwEither)
 import           Utils.ChainIndex             (MapUTXO, toCardanoUtxo)
 
 -- TODO: use different errors for each failable computation
