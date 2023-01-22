@@ -8,12 +8,14 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Types.Error where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
 import           Control.Exception                (Exception)
 import           Control.Monad.Catch              (MonadThrow (..))
+import qualified Data.Aeson                       as J
 import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
 import           Network.HTTP.Client              (Request, HttpExceptionContent)
@@ -21,6 +23,9 @@ import           Prelude
 
 data ConnectionError = ConnectionError Request HttpExceptionContent
     deriving (Show, Exception)
+
+instance ToJSON ConnectionError where
+    toJSON _ = J.String "Connection error."
 
 data TxBuilderError = TxBuilderError
     {
