@@ -16,6 +16,7 @@ module Tests.Wallet where
 
 import           Cardano.Api.Shelley                 (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
 import           Cardano.Mnemonic                    (MkSomeMnemonic(..))
+import           Cardano.Node.Emulator.Params        (Params(..))
 import           Cardano.Wallet.Primitive.Passphrase (Passphrase(..))
 import           Cardano.Wallet.Primitive.Types      (WalletId(..))
 import           Data.Aeson                          (decode)
@@ -27,7 +28,7 @@ import           Data.String                         (IsString(fromString))
 import           Data.Text                           (Text)
 import qualified Data.Text                           as T
 import           IO.Wallet                           (HasWallet(..), getWalletTxOutRefs, genWalletId, restoreWalletFromFile, walletIdFromFile)
-import           Ledger                              (Params(..), TxOutRef, stakingCredential)
+import           Ledger                              (TxOutRef, stakingCredential)
 import           Prelude                             hiding (readFile)
 import           Utils.Address                       (bech32ToKeyHashes, bech32ToAddress)
 

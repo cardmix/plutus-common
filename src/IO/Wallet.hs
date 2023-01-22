@@ -17,11 +17,13 @@
 
 module IO.Wallet where
 
+import           Cardano.Mnemonic                                   (SomeMnemonic, MkSomeMnemonic(..))
+import           Cardano.Node.Emulator                              (Params)
 import qualified Cardano.Wallet.Api.Client                          as Client
 import           Cardano.Wallet.Api.Types                           (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..),
                                                                      ApiSignTransactionPostData(ApiSignTransactionPostData), ApiWallet())
 import           Cardano.Wallet.Api.Types.SchemaMetadata            (TxMetadataSchema(..))
-import           Cardano.Mnemonic                                   (SomeMnemonic, MkSomeMnemonic(..))
+import           Cardano.Wallet.LocalClient.ExportTx                (export)
 import           Cardano.Wallet.Primitive.AddressDerivation         (WalletKey(digest, publicKey))
 import           Cardano.Wallet.Primitive.AddressDerivation.Shelley (generateKeyFromSeed)
 import           Cardano.Wallet.Primitive.Passphrase                (Passphrase (..), currentPassphraseScheme, preparePassphrase)
@@ -30,11 +32,10 @@ import           Cardano.Wallet.Primitive.Types.Address             (AddressStat
 import           Control.Concurrent                                 (threadDelay)
 import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
-import           Control.Lens.Tuple                                 (_3)
 import           Control.Monad                                      (void, unless)
 import           Control.Monad.IO.Class                             (MonadIO(..))
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
-import           Data.Aeson.Lens                                    (key, AsPrimitive(_String))
+import           Data.Aeson.Lens                                    (key, _String)
 import qualified Data.ByteString.Lazy                               as LB
 import           Data.Coerce                                        (coerce)
 import qualified Data.Map                                           as Map
@@ -46,22 +47,26 @@ import           Data.Text.Class                                    (FromText(fr
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
 import           IO.ChainIndex                                      (getUtxosAt)
-import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), Params (..), PaymentPubKeyHash,
-                                                                     StakePubKeyHash, TxOutRef, StakingCredential, Ada, txOutValue, txOutAddress, getCardanoTxOutputs,
-                                                                    _decoratedTxOutAddress, Value)
+import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), PaymentPubKeyHash,
+                                                                        TxOutRef, StakingCredential, Ada, Value, txOutValue, txOutAddress,
+                                                                        getCardanoTxOutputs, _decoratedTxOutAddress, toPlutusAddress)
 import qualified Ledger.Ada                                         as Ada
-import qualified Ledger.Value                                       as Value
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
+import           Ledger.Value                                       (leq)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
-import           Plutus.Contract.Wallet                             (export)
 import           PlutusTx.IsData                                    (ToData, FromData)
-import           Utils.Address                                      (bech32ToAddress, bech32ToKeyHashes)
+import           PlutusTx.Prelude                                   ((-), zero)
+import           Prelude                                            hiding ((-))
+
+import           Types.Error                                        (ConnectionError)
+import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
 import           Utils.ChainIndex                                   (MapUTXO)
-import           Utils.Servant                                      (Endpoint, ConnectionError, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
+import           Utils.Servant                                      (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
 import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
+
 ------------------------------------------- Restore-wallet -------------------------------------------
 
 class (Monad m, MonadIO m) => HasWallet m where
@@ -112,13 +117,10 @@ getFromEndpointWallet = getFromEndpointOnPort 8090
 pattern WalletApiConnectionError :: Request -> HttpExceptionContent -> ConnectionError
 pattern WalletApiConnectionError req content <- ConnectionErrorOnPort 8090 req content
 
--- Important note: this function only takes first used addres from the list, 
--- while the one with the highest UTXO's sum on it may be preferred.
--- Maybe later we should add a check for the UTXO's sum on each used address and select one with the maximum amount.
 getWalletAddrBech32 :: HasWallet m => m Text
 getWalletAddrBech32 = do
     walletId <- getWalletId
-    getFromEndpointWallet (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Used)) >>= \case
+    getFromEndpointWallet (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Unused)) >>= \case
         v:_ -> pure $ v ^. key "id"._String
         _   -> error $  "There are no addresses associated with this wallet ID:\n" <> show walletId
 
@@ -127,14 +129,14 @@ getWalletAddr = do
     addrWalletBech32 <- getWalletAddrBech32
     pure $ case bech32ToAddress <$> fromText addrWalletBech32 of
         Right (Just addr) -> addr
-        _                 -> error $ "Can't get wallet address from bech32: " <> T.unpack addrWalletBech32
+        _                 -> error $ "Cannot get wallet address from bech32: " <> T.unpack addrWalletBech32
 
-getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakePubKeyHash)
+getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakingCredential)
 getWalletKeyHashes = do
-    addrWalletBech32 <- getWalletAddrBech32
-    pure $ case bech32ToKeyHashes <$> fromText addrWalletBech32 of
-        Right (Just hashes) -> hashes
-        _                   -> error $ "Can't get wallet key hashes from bech32: " <> T.unpack addrWalletBech32
+    addrWallet <- getWalletAddr
+    pure $ case addressToKeyHashes addrWallet of
+        Just hs -> hs
+        Nothing -> error $ "The address does not correspond to a public key: " <> show addrWallet
 
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
 getWalletFromId = getFromEndpointWallet . Client.getWallet Client.walletClient . ApiT
@@ -156,19 +158,19 @@ getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems
 getWalletUtxos :: HasWallet m => m MapUTXO
 getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
 
--- Get wallet total profit from Tx.
+-- Get wallet total profit from a transaction.
 getTxProfit :: HasWallet m => CardanoTx -> MapUTXO -> m Value
 getTxProfit tx txUtxos = do
         addrs <- ownAddresses
-        let txOuts = Map.elems txUtxos
-            spent  = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress txOuts
-            income = getTotalValue addrs txOutValue txOutAddress $ getCardanoTxOutputs tx
-        pure $ spent <> income
+        let txOuts   = Map.elems txUtxos
+            spent    = getTotalValue addrs _decoratedTxOutValue _decoratedTxOutAddress txOuts
+            produced = getTotalValue addrs txOutValue (toPlutusAddress . txOutAddress) $ getCardanoTxOutputs tx
+        pure $ produced - spent
     where
         getTotalValue addrs getValue getAddr = mconcat . map getValue . filter ((`elem` addrs) . getAddr)
 
 isProfitableTx :: HasWallet m => CardanoTx -> MapUTXO -> m Bool
-isProfitableTx tx txUtxos = all ((>= 0) . (^. _3)) . Value.flattenValue <$> getTxProfit tx txUtxos
+isProfitableTx tx txUtxos = leq zero <$> getTxProfit tx txUtxos
  
 ------------------------------------------- Tx functions -------------------------------------------
 

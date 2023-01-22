@@ -30,16 +30,18 @@ common lang
 library
     import: lang
     exposed-modules:
+      Constraints.Balance
       Constraints.OffChain
       Constraints.OnChain
-      Constraints.Prebalance
       IO.ChainIndex
       IO.Time
       IO.Wallet
       Scripts.OneShotCurrency
+      Types.Error
       Types.Tx
       Utils.Address
       Utils.ChainIndex
+      Utils.Crypto
       Utils.Orphans
       Utils.Tx
       Utils.Servant
@@ -57,8 +59,11 @@ library
       cardano-ledger-byron                   -any,
       cardano-ledger-core                    -any,
       cardano-ledger-shelley                 -any,
+      cardano-node-emulator                  -any,
+      cardano-streaming                      -any,
       cardano-wallet-core                    -any,
       containers                             -any,
+      cryptonite                             -any,
       data-default                           -any,
       directory                              -any,
       either                                 -any,
@@ -69,23 +74,27 @@ library
       freer-simple                           -any,
       from-sum                               -any,
       flat                                   -any,
+      hex-text                               -any,
       http-client                            -any,
       lens                                   -any,
       lens-aeson                             -any,
+      memory                                 -any,
       mtl                                    -any,
       openapi3                               -any,
-      playground-common                      -any,
-      plutus-contract                        -any,
       plutus-chain-index                     -any,
       plutus-chain-index-core                -any,
-      plutus-pab                             -any,
-      plutus-tx-plugin                       -any,
-      plutus-tx                              -any,
-      plutus-tx-extra                        -any,
+      plutus-contract                        -any,
+      plutus-contract-certification          -any,
+      plutus-example                         -any,
       plutus-ledger                          -any,
       plutus-ledger-api                      -any,
       plutus-ledger-constraints              -any,
+      plutus-pab                             -any,
       plutus-script-utils                    -any,
+      plutus-tx                              -any,
+      plutus-tx-constraints                  -any,
+      plutus-tx-extra                        -any,
+      plutus-tx-plugin                       -any,
       plutus-use-cases                       -any,
       purescript-bridge                      -any,
       random                                 -any,
@@ -120,10 +129,13 @@ test-suite plutus-apps-extra-test
     bytestring                             -any,
     cardano-addresses                      -any,
     cardano-api                            -any,
+    cardano-node-emulator                  -any,
     cardano-wallet-core                    -any,
     containers                             -any,
     data-default                           -any,
+    from-sum                               -any,
     generic-arbitrary                      -any,
+    hex-text                               -any,
     plutus-apps-extra                      -any,
     plutus-contract                        -any,
     plutus-core                            -any,

@@ -34,8 +34,10 @@ import qualified Plutus.ChainIndex.Client          as Client
 import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
 import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
 import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap)
+
 import           Utils.ChainIndex                  (MapUTXO)
-import           Utils.Servant                     (pattern ConnectionErrorOnPort, getFromEndpointOnPort, Endpoint, ConnectionError)
+import           Utils.Servant                     (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
+import           Types.Error                       (ConnectionError)
 
 ----------------------------------- Chain index cache -----------------------------------
 

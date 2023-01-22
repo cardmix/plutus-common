@@ -18,14 +18,15 @@
 
 module Tests.OnChain where
 
-import           Plutus.Script.Utils.V2.Typed.Scripts (ValidatorTypes (..), TypedValidator,
-                                                        mkTypedValidator, mkUntypedValidator, mkUntypedMintingPolicy)
+import           Ledger.Typed.Scripts                 (IsScriptContext (..))
+import           Plutus.Script.Utils.V2.Typed.Scripts (ValidatorTypes (..), TypedValidator, mkTypedValidator)
 import           Plutus.V2.Ledger.Api                 (ScriptContext(..), MintingPolicy, TokenName (..), mkMintingPolicyScript)
 import           PlutusTx                             (compile)
 import           PlutusTx.AssocMap                    (fromList)
 import           PlutusTx.Prelude                     (BuiltinByteString, Bool (..), ($), map)
 
 import           Constraints.OnChain                  (tokensMinted)
+
 
 ------------------------------------- Test Minting Policy --------------------------------------
 
@@ -60,4 +61,4 @@ testTypedValidator = mkTypedValidator @Testing
     $$(PlutusTx.compile [|| testValidatorCheck ||])
     $$(PlutusTx.compile [|| wrap ||])
   where
-    wrap = mkUntypedValidator @() @()
+    wrap = mkUntypedValidator @ScriptContext @() @()
