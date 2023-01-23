@@ -30,9 +30,9 @@ import           Cardano.Wallet.Primitive.Passphrase                (Passphrase 
 import           Cardano.Wallet.Primitive.Types                     (WalletId(WalletId))
 import           Cardano.Wallet.Primitive.Types.Address             (AddressState(..))
 import           Control.Concurrent                                 (threadDelay)
-import           Control.FromSum                                    (fromEither)
 import           Control.Lens                                       ((<&>), (^?), (^.))
 import           Control.Monad                                      (void, unless)
+import           Control.Monad.Catch                                (MonadThrow(..))
 import           Control.Monad.IO.Class                             (MonadIO(..))
 import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
 import           Data.Aeson.Lens                                    (key, _String)
@@ -61,7 +61,7 @@ import           PlutusTx.IsData                                    (ToData, Fro
 import           PlutusTx.Prelude                                   ((-), zero)
 import           Prelude                                            hiding ((-))
 
-import           Types.Error                                        (ConnectionError)
+import           Types.Error                                        (ConnectionError, throwEither, throwMaybe, MkTxError (..), WalletError (..))
 import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
 import           Utils.ChainIndex                                   (MapUTXO)
 import           Utils.Servant                                      (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
@@ -69,7 +69,7 @@ import           Utils.Tx                                           (apiSerializ
 
 ------------------------------------------- Restore-wallet -------------------------------------------
 
-class (Monad m, MonadIO m) => HasWallet m where
+class (Monad m, MonadIO m, MonadThrow m) => HasWallet m where
     getRestoredWallet :: m RestoredWallet
 
 data RestoredWallet = RestoredWallet
@@ -93,13 +93,12 @@ genWalletId mnemonic pp = WalletId $ digest $ publicKey rootXPrv
     rootXPrv = generateKeyFromSeed (mnemonic, Nothing) pwdP
     pwdP = preparePassphrase currentPassphraseScheme pp
 
-restoreWalletFromFile :: MonadIO m => FilePath -> m RestoredWallet
-restoreWalletFromFile fp = liftIO $ LB.readFile fp >>= (\case
-    Right rw -> pure rw
-    Left err -> error err) . eitherDecode
+restoreWalletFromFile :: (MonadIO m, MonadThrow m) => FilePath -> m RestoredWallet
+restoreWalletFromFile fp = liftIO (LB.readFile fp) >>=
+    either (throwM . RestoredWalletParsingError . T.pack) pure . eitherDecode
 
 -- Read restore-wallet JSON file and generate walletId from it
-walletIdFromFile :: MonadIO m => FilePath -> m WalletId
+walletIdFromFile :: (MonadIO m, MonadThrow m) => FilePath -> m WalletId
 walletIdFromFile fp = do
     RestoredWallet{..} <- restoreWalletFromFile fp
     pure $ genWalletId mnemonicSentence passphrase
@@ -122,21 +121,21 @@ getWalletAddrBech32 = do
     walletId <- getWalletId
     getFromEndpointWallet (Client.listAddresses  Client.addressClient (ApiT walletId) (Just $ ApiT Unused)) >>= \case
         v:_ -> pure $ v ^. key "id"._String
-        _   -> error $  "There are no addresses associated with this wallet ID:\n" <> show walletId
+        _   -> throwM $ WalletIdDoesntHaveAnyAssociatedAddresses walletId
 
 getWalletAddr :: HasWallet m => m Address
 getWalletAddr = do
     addrWalletBech32 <- getWalletAddrBech32
-    pure $ case bech32ToAddress <$> fromText addrWalletBech32 of
-        Right (Just addr) -> addr
-        _                 -> error $ "Cannot get wallet address from bech32: " <> T.unpack addrWalletBech32
+    case bech32ToAddress <$> fromText addrWalletBech32 of
+        Right (Just addr) -> pure addr
+        _                 -> throwM $ UnparsableAddress addrWalletBech32
 
 getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakingCredential)
 getWalletKeyHashes = do
     addrWallet <- getWalletAddr
-    pure $ case addressToKeyHashes addrWallet of
-        Just hs -> hs
-        Nothing -> error $ "The address does not correspond to a public key: " <> show addrWallet
+    case addressToKeyHashes addrWallet of
+        Just hs -> pure hs
+        Nothing -> throwM $ AddressDoesntCorrespondToPubKey addrWallet
 
 getWalletFromId :: HasWallet m => WalletId -> m ApiWallet
 getWalletFromId = getFromEndpointWallet . Client.getWallet Client.walletClient . ApiT
@@ -151,7 +150,7 @@ ownAddressesBech32 = do
     pure $ map (^. key "id"._String) as
 
 -- Get all ada at a wallet
-getWalletAda :: HasWallet m => m Ada 
+getWalletAda :: HasWallet m => m Ada
 getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
 
 -- Get all utxos at a wallet
@@ -171,21 +170,20 @@ getTxProfit tx txUtxos = do
 
 isProfitableTx :: HasWallet m => CardanoTx -> MapUTXO -> m Bool
 isProfitableTx tx txUtxos = leq zero <$> getTxProfit tx txUtxos
- 
+
 ------------------------------------------- Tx functions -------------------------------------------
 
 signTx :: HasWallet m => CardanoTx -> m CardanoTx
 signTx (cardanoTxToSealedTx -> Just stx) = do
     ppUser   <- passphrase <$> getRestoredWallet
     walletId <- getWalletId
-    sign walletId (coerce ppUser) >>= (\case
-        Just ctx -> pure ctx
-        _        -> error "Unable to convert ApiSerialisedTransaction to a CardanoTx.") . apiSerializedTxToCardanoTx
+    asTx <- sign walletId (coerce ppUser)
+    throwMaybe (ConvertApiSerialisedTxToCardanoTxError asTx) $ apiSerializedTxToCardanoTx asTx
     where
         sign walletId pp = getFromEndpointWallet $ Client.signTransaction Client.transactionClient
             (ApiT walletId)
             (ApiSignTransactionPostData (ApiT stx) (ApiT pp))
-signTx _ = error "Unable to convert CardanoTx to a SealedTx."
+signTx ctx = throwM $ ConvertCardanoTxToSealedTxError ctx
 
 balanceTx ::
     ( HasWallet m
@@ -195,16 +193,13 @@ balanceTx ::
     ) =>
     Params -> ScriptLookups a -> TxConstraints (RedeemerType a) (DatumType a) -> m CardanoTx
 balanceTx params lookups cons = do
-    walletId <- getWalletId
-    balance walletId >>= (\case
-        Just ctx -> pure ctx
-        _        -> error "Unable to convert ApiSerialisedTransaction to a CardanoTx.") . apiSerializedTxToCardanoTx
-    where
-        -- tx to pass to the wallet as JSON
-        etx = fromEither (error . show) $ export params $ fromEither (error . show) $ mkTxWithParams params lookups cons
-        balance walletId = getFromEndpointWallet $ Client.balanceTransaction Client.transactionClient
-            (ApiT walletId)
-            (toJSON etx)
+    walletId     <- getWalletId
+    unbalancedTx <- throwEither UnbuildableUnbalancedTx (mkTxWithParams params lookups cons)
+    exportTx     <- throwEither UnbuildableExportTx $ export params unbalancedTx
+    asTx         <- getFromEndpointWallet $ Client.balanceTransaction Client.transactionClient
+        (ApiT walletId)
+        (toJSON exportTx)
+    throwMaybe (ConvertApiSerialisedTxToCardanoTxError asTx) $ apiSerializedTxToCardanoTx asTx
 
 -- Send a balanced transaction to Cardano Wallet Backend and return immediately
 submitTx :: HasWallet m => CardanoTx -> m ()
@@ -214,7 +209,7 @@ submitTx (cardanoTxToSealedTx -> Just stx) = do
         Client.submitTransaction Client.transactionClient
             (ApiT walletId)
             (ApiSerialisedTransaction $ ApiT stx)
-submitTx _ = error "Unable to convert CardanoTx to a SealedTx."
+submitTx ctx = throwM $ ConvertCardanoTxToSealedTxError ctx
 
 -- Send a balanced transaction to Cardano Wallet Backend and wait until transaction is confirmed or declined
 submitTxConfirmed :: HasWallet m => CardanoTx -> m ()
@@ -228,15 +223,15 @@ awaitTxConfirmed ctx = go
     where
         go = do
             walletId <- getWalletId
+            hash <- throwEither (CantExtractHashFromCardanoTx ctx) . fromText . T.pack . show  $ getCardanoTxId ctx
             res <- getFromEndpointWallet $ Client.getTransaction Client.transactionClient
                 (ApiT walletId)
-                (ApiTxId $ ApiT $ mkHash ctx)
+                (ApiTxId $ ApiT hash)
                 TxMetadataNoSchema
             unless (confirmedResponse res) $ liftIO (threadDelay 1_000_000) >> go
         confirmedResponse res = case res ^? key "status"._String of
             Just "in_ledger" -> True
             _                -> False
-        mkHash = fromEither (error . show) . fromText . T.pack . show  . getCardanoTxId
 
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
 getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Int -> m [TxOutRef]
@@ -250,7 +245,7 @@ getWalletTxOutRefs params pkh mbSkc n = do
     liftIO $ putStrLn "Submitting..."
     submitTxConfirmed signedTx
     let refs = case signedTx of
-            EmulatorTx _    -> error "Can not get TxOutRef's from EmulatorTx."
+            EmulatorTx _    -> throwM CantExtractTxOutRefsFromEmulatorTx
             CardanoApiTx tx -> Map.keys $ unspentOutputsTx tx
     liftIO $ putStrLn "Submitted!"
     return refs
