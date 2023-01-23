@@ -45,6 +45,7 @@ data MkTxError
     | CantExtractHashFromCardanoTx CardanoTx
     | ConvertApiSerialisedTxToCardanoTxError ApiSerialisedTransaction
     | ConvertCardanoTxToSealedTxError CardanoTx
+    | AllConstructorsFailed 
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
 data BalanceExternalTxError 
