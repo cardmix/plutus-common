@@ -38,14 +38,15 @@ data TxBuilderError = TxBuilderError
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
 data MkTxError 
-    = UnbuildableUnbalancedTx
-    | UnbuildableExportTx
-    | UnbuildableTxOut
-    | CantExtractTxOutRefsFromEmulatorTx
+    = AllConstructorsFailed 
     | CantExtractHashFromCardanoTx CardanoTx
+    | CantExtractKeyHashesFromAddress Address
+    | CantExtractTxOutRefsFromEmulatorTx
     | ConvertApiSerialisedTxToCardanoTxError ApiSerialisedTransaction
     | ConvertCardanoTxToSealedTxError CardanoTx
-    | AllConstructorsFailed 
+    | UnbuildableTxOut
+    | UnbuildableExportTx
+    | UnbuildableUnbalancedTx
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
 data BalanceExternalTxError 
