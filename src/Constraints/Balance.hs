@@ -20,11 +20,9 @@ import           Ledger.Index                 (UtxoIndex(..))
 import           Ledger.Tx.CardanoAPI         (toCardanoTxBodyContent, toCardanoAddressInEra)
 import           Ledger.Typed.Scripts         (ValidatorTypes(..), Any)
 import           Prelude
-
-import           Types.Error                  (TxBalancingError(UnbuildableTx), throwEither)
+import           Types.Error                  (throwEither, BalanceExternalTxError (..))
 import           Utils.ChainIndex             (MapUTXO, toCardanoUtxo)
 
--- TODO: use different errors for each failable computation
 balanceExternalTx :: (MonadThrow m)
                   => Params
                   -> MapUTXO
@@ -33,27 +31,27 @@ balanceExternalTx :: (MonadThrow m)
                   -> TxConstraints (RedeemerType Any) (DatumType Any)
                   -> m CardanoTx
 balanceExternalTx params walletUTXO changeAddress lookups cons = do
-    utx <- throwEither UnbuildableTx $ mkTxWithParams params lookups cons
+    utx <- throwEither MakeUnbalancedTxError $ mkTxWithParams params lookups cons
 
     cardanoBuildTx <- case utx of
-            UnbalancedEmulatorTx etx _ _ -> throwEither UnbuildableTx $
+            UnbalancedEmulatorTx etx _ _ -> throwEither MakeBuildTxFromEmulatorTxError $
                 toCardanoTxBodyContent (pNetworkId params) (emulatorPParams params) [] etx
             UnbalancedCardanoTx cbt _    -> pure cbt
 
     utxoIndex <- UtxoIndex <$> toCardanoUtxo params (slTxOutputs lookups)
 
-    cAddress <- throwEither UnbuildableTx $ toCardanoAddressInEra (pNetworkId params) changeAddress
+    cAddress <- throwEither NonBabbageEraChangeAddress $ toCardanoAddressInEra (pNetworkId params) changeAddress
 
     walletUTXOIndex <- toCardanoUtxo params walletUTXO
 
-    let utxoProvider = throwEither UnbuildableTx . utxoProviderFromWalletOutputs walletUTXOIndex
+    let utxoProvider = throwEither MakeUtxoProviderError . utxoProviderFromWalletOutputs walletUTXOIndex
 
     tx <- makeAutoBalancedTransactionWithUtxoProvider
             params
             utxoIndex
             cAddress
             utxoProvider
-            (const $ throwM UnbuildableTx)
+            (const $ throwM MakeAutoBalancedTxError)
             cardanoBuildTx
 
     return $ CardanoApiTx $ SomeTx tx BabbageEraInCardanoMode

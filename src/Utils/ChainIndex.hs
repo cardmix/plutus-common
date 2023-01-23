@@ -9,13 +9,13 @@ import qualified Data.Map                     as Map
 import           Ledger                       (TxOutRef(..), DecoratedTxOut(..), TxOut, toTxOut)
 import           Ledger.Value                 (adaOnlyValue)
 
-import           Types.Error                  (throwEither, TxBalancingError (..))
+import           Types.Error                  (throwEither, MkTxError(..))
 
 type MapUTXO = Map.Map TxOutRef DecoratedTxOut
 
 toCardanoUtxo :: (MonadThrow m) => Params -> MapUTXO -> m (Map.Map TxOutRef TxOut)
 toCardanoUtxo params utxos = 
-    let f (a, b) = (a, ) <$> throwEither UnbuildableTx (toTxOut (pNetworkId params) b)
+    let f (a, b) = (a, ) <$> throwEither UnbuildableTxOut (toTxOut (pNetworkId params) b)
     in Map.fromList <$> mapM f (Map.toList  utxos)
 
 filterPubKeyUtxos :: MapUTXO -> MapUTXO
