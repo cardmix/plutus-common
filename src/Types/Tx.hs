@@ -42,6 +42,6 @@ mkTxConstructor ct lookups = TxConstructor ct lookups [] $ Just (mempty, mempty)
 selectTxConstructor :: [Transaction] -> Maybe Transaction
 selectTxConstructor = find (isJust . txConstructorResult)
 
-constructTxConstraints :: TransactionBuilder () -> Transaction ->
+buildTxConstraints :: TransactionBuilder () -> Transaction ->
     Maybe (ScriptLookups Any, TxConstraints (RedeemerType Any) (DatumType Any))
-constructTxConstraints builder tx = txConstructorResult $ builder `execState` tx
+buildTxConstraints builder tx = txConstructorResult $ builder `execState` tx
