@@ -64,6 +64,10 @@ data WalletError
     | AddressDoesntCorrespondToPubKey Address
     deriving (Show, Exception)
 
+data SubmitTxToLocalNodeError
+    = CantSubmitEmulatorTx CardanoTx
+    deriving (Show, Exception)
+
 throwMaybe :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
 throwMaybe e = maybe (throwM e) pure 
 

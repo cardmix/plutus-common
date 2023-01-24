@@ -34,6 +34,7 @@ library
       Constraints.OffChain
       Constraints.OnChain
       IO.ChainIndex
+      IO.Node
       IO.Time
       IO.Wallet
       Scripts.OneShotCurrency
@@ -81,6 +82,7 @@ library
       memory                                 -any,
       mtl                                    -any,
       openapi3                               -any,
+      ouroboros-network                      -any,
       plutus-chain-index                     -any,
       plutus-chain-index-core                -any,
       plutus-contract                        -any,
@@ -103,6 +105,7 @@ library
       servant                                -any,
       servant-client                         -any,
       servant-client-core                    -any,
+      stm                                    -any,
       text                                   -any,
       text-class                             -any,
       time                                   -any,
