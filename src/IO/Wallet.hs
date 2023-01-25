@@ -47,9 +47,9 @@ import           Data.Text.Class                                    (FromText(fr
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
 import           IO.ChainIndex                                      (getUtxosAt)
-import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), PaymentPubKeyHash,
-                                                                        TxOutRef, StakingCredential, Ada, Value, txOutValue, txOutAddress,
-                                                                        getCardanoTxOutputs, _decoratedTxOutAddress, toPlutusAddress)
+import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), TxOutRef, PubKeyHash,
+                                                                        StakingCredential, Ada, Value, txOutValue, txOutAddress, getCardanoTxOutputs,
+                                                                        _decoratedTxOutAddress, toPlutusAddress, PaymentPubKeyHash (PaymentPubKeyHash))
 import qualified Ledger.Ada                                         as Ada
 import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
 import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
@@ -130,7 +130,7 @@ getWalletAddr = do
         Right (Just addr) -> pure addr
         _                 -> throwM $ UnparsableAddress addrWalletBech32
 
-getWalletKeyHashes :: HasWallet m => m (PaymentPubKeyHash, Maybe StakingCredential)
+getWalletKeyHashes :: HasWallet m => m (PubKeyHash, Maybe StakingCredential)
 getWalletKeyHashes = do
     addrWallet <- getWalletAddr
     case addressToKeyHashes addrWallet of
@@ -234,7 +234,7 @@ awaitTxConfirmed ctx = go
             _                -> False
 
 -- Create and submit a transaction that produces a specific number of outputs at the target wallet address
-getWalletTxOutRefs :: HasWallet m => Params -> PaymentPubKeyHash -> Maybe StakingCredential -> Int -> m [TxOutRef]
+getWalletTxOutRefs :: HasWallet m => Params -> PubKeyHash -> Maybe StakingCredential -> Int -> m [TxOutRef]
 getWalletTxOutRefs params pkh mbSkc n = do
     liftIO $ putStrLn "Balancing..."
     balancedTx <- balanceTx params lookups cons
@@ -252,5 +252,5 @@ getWalletTxOutRefs params pkh mbSkc n = do
     where
         lookups = mempty :: ScriptLookups Void
         cons    = case mbSkc of
-            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress pkh skc $ Ada.lovelaceValueOf 10_000_000
-            Nothing -> mustPayToPubKey pkh $ Ada.lovelaceValueOf 10_000_000
+            Just skc -> mconcat $ replicate n $ mustPayToPubKeyAddress (PaymentPubKeyHash pkh) skc $ Ada.lovelaceValueOf 10_000_000
+            Nothing -> mustPayToPubKey (PaymentPubKeyHash pkh) $ Ada.lovelaceValueOf 10_000_000

@@ -20,7 +20,7 @@ import           Ledger.Index                 (UtxoIndex(..))
 import           Ledger.Tx.CardanoAPI         (toCardanoTxBodyContent, toCardanoAddressInEra)
 import           Ledger.Typed.Scripts         (ValidatorTypes(..), Any)
 import           Prelude
-import           Types.Error                  (throwEither, BalanceExternalTxError (..))
+import           Types.Error                  (BalanceExternalTxError (..), throwEither)
 import           Utils.ChainIndex             (MapUTXO, toCardanoUtxo)
 
 balanceExternalTx :: (MonadThrow m)

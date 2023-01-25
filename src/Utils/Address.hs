@@ -10,27 +10,27 @@
 module Utils.Address where
 
 import           Data.Text                       (Text)
-import           Cardano.Api.Shelley             (AsType(..), StakeAddress(..), shelleyAddressInEra, ShelleyEra, SerialiseAddress(..), 
-                                                  byronAddressInEra)
+import           Cardano.Api.Shelley             (AsType(..), StakeAddress(..), ShelleyEra, SerialiseAddress(..), 
+                                                    shelleyAddressInEra, byronAddressInEra)
 import           Cardano.Ledger.Alonzo.TxInfo    (transKeyHash)
 import qualified Cardano.Ledger.Credential       as Shelley
 import           Control.Applicative             ((<|>))
-import           Ledger                          (StakingCredential, toPlutusAddress)
-import           Ledger.Address                  (PaymentPubKeyHash(..), StakePubKeyHash(..), Address(..), toPubKeyHash, stakingCredential)
+import           Ledger                          (StakingCredential, toPlutusAddress, PubKeyHash (..))
+import           Ledger.Address                  (StakePubKeyHash(..), Address(..), toPubKeyHash, stakingCredential)
 
 ---------------------------- Address to keyhashes conversions ----------------------------------
 
-addressToKeyHashes :: Address -> Maybe (PaymentPubKeyHash, Maybe StakingCredential)
+addressToKeyHashes :: Address -> Maybe (PubKeyHash, Maybe StakingCredential)
 addressToKeyHashes addr = do
     pkh  <- toPubKeyHash addr
-    pure (PaymentPubKeyHash pkh, stakingCredential addr)
+    pure (pkh, stakingCredential addr)
 
 ----------------------------------- Bech32 conversions -----------------------------------------
 
 -- TODO: simplify address conversions using the new Plutus.Ledger functions
 
 -- Extract key hashes from bech32 Shelley/Byron address
-bech32ToKeyHashes :: Text -> Maybe (PaymentPubKeyHash, Maybe StakingCredential)
+bech32ToKeyHashes :: Text -> Maybe (PubKeyHash, Maybe StakingCredential)
 bech32ToKeyHashes txt = do
     addr <- bech32ToAddress txt
     addressToKeyHashes addr
