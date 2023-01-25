@@ -22,7 +22,6 @@ import           Data.Functor         ((<&>))
 import qualified Data.Map             as Map
 import           Data.Maybe           (fromMaybe)
 import qualified Data.Text            as T
-import qualified Data.Text.Encoding   as T
 import qualified Data.Vector          as Vector
 import           Ledger               (Address(..), TxOutRef(..), DecoratedTxOut(..), PaymentPubKeyHash(..), Value, TxId(..))
 import qualified Ledger.Ada           as Ada
@@ -30,7 +29,7 @@ import qualified Ledger.Value         as Value
 import           Plutus.V1.Ledger.Api (StakingCredential(..), Credential(..), fromBuiltin, toBuiltin)
 import qualified PlutusTx.AssocMap    as PMap
 import           Servant.API          (ToHttpApiData(..))
-import           Text.Hex             (decodeHex)
+import           Text.Hex             (decodeHex, encodeHex)
 import           Utils.Address        (bech32ToKeyHashes)
 import           Utils.ChainIndex     (MapUTXO)
 
@@ -88,7 +87,7 @@ instance FromJSON a => FromJSON (SingleFromArray a) where
 
 instance ToHttpApiData (Kupo TxOutRef) where
     toUrlPiece (Kupo TxOutRef{..}) = T.pack (show txOutRefIdx <> "@") <>
-        T.decodeUtf8 (fromBuiltin $ getTxId txOutRefId)
+        encodeHex (fromBuiltin $ getTxId txOutRefId)
 
 instance ToHttpApiData (Kupo Address) where
     toUrlPiece (Kupo Address{..}) = T.pack $ pCred <> sCred
