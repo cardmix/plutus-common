@@ -1,23 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Tests.Kupo where
 
-import           Data.Text        (Text)
-import qualified IO.ChainIndex    as CI
-import qualified IO.Kupo          as Kupo
-import           Ledger           (TxOutRef(..), TxId (TxId))
-import           Utils.Address    (bech32ToAddress)
-import Data.String (IsString(..))
-import qualified Data.ByteString as BS
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import           Data.Maybe           (fromJust)
+import           Data.Text            (Text)
+import qualified IO.ChainIndex        as CI
+import qualified IO.Kupo              as Kupo
+import           Ledger               (TxOutRef(..), TxId (TxId))
 import           Plutus.V1.Ledger.Api (toBuiltin)
-import qualified Text.Hex as T
-import Data.Maybe (fromJust)
-import qualified Data.ByteString.Lazy.Char8 as BSL
-import PlutusTx.Builtins.Class (stringToBuiltinByteString)
-import Data.Word (Word8)
+import qualified Text.Hex             as T
+import           Utils.Address        (bech32ToAddress)
 
 getUtxosAt :: Text -> IO ()
 getUtxosAt bech32 = do
