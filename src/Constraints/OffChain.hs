@@ -15,14 +15,14 @@ import           Control.Monad.State                 (MonadState (..))
 import           Data.Functor                        (($>))
 import           Data.List                           (find)
 import qualified Data.Map                            as Map
-import           Data.Maybe                          (fromJust, isJust, isNothing)
+import           Data.Maybe                          (isJust, isNothing)
 import           Data.Text                           (Text)
 import           Ledger                              (DecoratedTxOut(..), Versioned, Slot, mintingPolicyHash, validatorHash)
 import           Ledger.Address                      (PaymentPubKeyHash)
 import           Ledger.Constraints.OffChain         (unspentOutputs, otherData, mintingPolicy, otherScript)
 import           Ledger.Constraints.TxConstraints
 import           Ledger.Constraints.ValidityInterval (interval)
-import           Plutus.V2.Ledger.Api
+import           Plutus.V2.Ledger.Api                hiding (singleton)
 import           Prelude                             
 
 import           Types.Error                         (TxBuilderError(..))
@@ -124,25 +124,23 @@ utxoReferencedTx' f = do
             put constr { txConstructorResult = res <&&> Just (lookups, cons) }
             return $ Just utxo
 
-utxoProducedPublicKeyTx :: ToData datum => PaymentPubKeyHash -> Maybe StakingCredential -> Value -> Maybe datum -> TransactionBuilder ()
-utxoProducedPublicKeyTx pkh skc val dat = do
+utxoProducedTx :: ToData datum => Address -> Value -> Maybe datum -> TransactionBuilder ()
+utxoProducedTx addr val dat = do
     constr <- get
     let res = txConstructorResult constr
-        c | isJust skc = if isJust dat
-            then mustPayToPubKeyAddressWithDatumHash pkh (fromJust skc) (Datum $ toBuiltinData $ fromJust dat) val
-            else mustPayToPubKeyAddress pkh (fromJust skc) val
-          | otherwise = if isJust dat
-            then mustPayToPubKeyWithDatumHash pkh (Datum $ toBuiltinData $ fromJust dat) val
-            else mustPayToPubKey pkh val
+        d    = fmap (TxOutDatumHash . Datum . toBuiltinData) dat
+        c    = singleton (MustPayToAddress addr d Nothing val)
     put constr { txConstructorResult = res <&&> Just (mempty, c) }
 
-utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakingCredential -> Value -> datum -> TransactionBuilder ()
-utxoProducedScriptTx vh skc val dat = do
-    constr <- get
-    let res = txConstructorResult constr
-        c | isJust skc = mustPayToOtherScriptAddressWithDatumHash vh (fromJust skc) (Datum $ toBuiltinData dat) val
-          | otherwise  = mustPayToOtherScriptWithDatumHash vh (Datum $ toBuiltinData dat) val
-    put constr { txConstructorResult = res <&&> Just (mempty, c) }
+utxoProducedPublicKeyTx :: ToData datum => PubKeyHash -> Maybe StakingCredential -> Value -> Maybe datum -> TransactionBuilder ()
+utxoProducedPublicKeyTx pkh skc val dat =
+    let addr = Address (PubKeyCredential pkh) skc
+    in utxoProducedTx addr val dat
+
+utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakingCredential -> Value -> Maybe datum -> TransactionBuilder ()
+utxoProducedScriptTx vh skc val dat =
+    let addr = Address (ScriptCredential vh) skc
+    in utxoProducedTx addr val dat
 
 tokensMintedTx :: ToData redeemer => Versioned MintingPolicy -> redeemer -> Value -> TransactionBuilder ()
 tokensMintedTx mp red v = do
