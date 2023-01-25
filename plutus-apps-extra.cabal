@@ -34,6 +34,7 @@ library
       Constraints.OffChain
       Constraints.OnChain
       IO.ChainIndex
+      IO.Kupo
       IO.Node
       IO.Time
       IO.Wallet
@@ -43,6 +44,7 @@ library
       Utils.Address
       Utils.ChainIndex
       Utils.Crypto
+      Utils.Kupo
       Utils.Orphans
       Utils.Tx
       Utils.Servant
@@ -113,6 +115,7 @@ library
       prettyprinter                          -any,
       QuickCheck                             -any,
       uuid                                   -any,
+      vector                                 -any,
     hs-source-dirs: src
 
 test-suite plutus-apps-extra-test
@@ -124,6 +127,7 @@ test-suite plutus-apps-extra-test
                         -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
   Main-Is:              Main.hs
   Other-Modules:        Tests.ChainIndex
+  Other-Modules:        Tests.Kupo
                         Tests.OnChain
                         Tests.Wallet
   Build-Depends:
