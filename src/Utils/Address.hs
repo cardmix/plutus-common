@@ -9,14 +9,17 @@
 
 module Utils.Address where
 
+import           Data.Either.Extra               (eitherToMaybe)
 import           Data.Text                       (Text)
-import           Cardano.Api.Shelley             (AsType(..), StakeAddress(..), ShelleyEra, SerialiseAddress(..), 
-                                                    shelleyAddressInEra, byronAddressInEra)
+import           Cardano.Api.Shelley             (AsType(..), StakeAddress(..), ShelleyEra, SerialiseAddress(..),
+                                                    shelleyAddressInEra, byronAddressInEra, NetworkId)
 import           Cardano.Ledger.Alonzo.TxInfo    (transKeyHash)
 import qualified Cardano.Ledger.Credential       as Shelley
+
 import           Control.Applicative             ((<|>))
 import           Ledger                          (StakingCredential, toPlutusAddress, PubKeyHash (..))
 import           Ledger.Address                  (StakePubKeyHash(..), Address(..), toPubKeyHash, stakingCredential)
+import           Ledger.Tx.CardanoAPI            (toCardanoAddressInEra)
 
 ---------------------------- Address to keyhashes conversions ----------------------------------
 
@@ -41,6 +44,10 @@ bech32ToAddress txt = toPlutusAddress <$> (shelleyAddr <|> byronAddr)
     where
         shelleyAddr = shelleyAddressInEra @ShelleyEra <$> deserialiseAddress AsShelleyAddress txt
         byronAddr = byronAddressInEra <$> deserialiseAddress AsByronAddress txt
+
+-- Convert Plutus Address to bech32 text
+addressToBech32 :: NetworkId -> Address -> Maybe Text
+addressToBech32 networdId = fmap serialiseAddress . eitherToMaybe . toCardanoAddressInEra networdId
 
 -- Convert bech32 Stake address to a Plutus StakePubKeyHash.
 bech32ToStakePubKeyHash :: Text -> Maybe StakePubKeyHash
