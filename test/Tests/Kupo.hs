@@ -2,11 +2,12 @@
 
 module Tests.Kupo where
 
+import           Data.Function        (on)
 import           Data.Maybe           (fromJust)
 import           Data.Text            (Text)
 import qualified IO.ChainIndex        as CI
 import qualified IO.Kupo              as Kupo
-import           Ledger               (TxOutRef(..), TxId (TxId))
+import           Ledger               (DecoratedTxOut(..), TxId(..), TxOutRef(..))  
 import           Plutus.V1.Ledger.Api (toBuiltin)
 import qualified Text.Hex             as T
 import           Utils.Address        (bech32ToAddress)
@@ -29,6 +30,11 @@ unspentTxOutFromRef ref = do
     print res
     putStrLn "\nChainIndex:\n"
     print res'
+    putStrLn "the scripts are the same:"
+    print $ ((==) `on` _decoratedTxOutReferenceScript) res res'
+
+getScriptByHash :: IO ()
+getScriptByHash = Kupo.getSciptByHash "a258f896dff1d01ac9a8bd0598304b933a8f3e9e0953938767178099" >>= print
 
 ref :: TxOutRef
-ref = TxOutRef (TxId $ toBuiltin $ fromJust $ T.decodeHex "470abf22c0ded4f2c0a06a762d50cb3cb4cbbea3cd0eba6b1e4aafad82d46084") 4
+ref = TxOutRef (TxId $ toBuiltin $ fromJust $ T.decodeHex "b2f79375bf73234bb988cfdb911c78ac4e9b5470197e828d507babfdcca08d16") 1
