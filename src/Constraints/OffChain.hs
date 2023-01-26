@@ -137,10 +137,10 @@ utxoProducedPublicKeyTx pkh skc val dat =
     let addr = Address (PubKeyCredential pkh) skc
     in utxoProducedTx addr val dat
 
-utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakingCredential -> Value -> Maybe datum -> TransactionBuilder ()
+utxoProducedScriptTx :: ToData datum => ValidatorHash -> Maybe StakingCredential -> Value -> datum -> TransactionBuilder ()
 utxoProducedScriptTx vh skc val dat =
     let addr = Address (ScriptCredential vh) skc
-    in utxoProducedTx addr val dat
+    in utxoProducedTx addr val (Just dat)
 
 tokensMintedTx :: ToData redeemer => Versioned MintingPolicy -> redeemer -> Value -> TransactionBuilder ()
 tokensMintedTx mp red v = do
