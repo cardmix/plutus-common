@@ -44,6 +44,7 @@ library
       Utils.Address
       Utils.ChainIndex
       Utils.Crypto
+      Utils.Kupo
       Utils.Orphans
       Utils.Tx
       Utils.Servant
