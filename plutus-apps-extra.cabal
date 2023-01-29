@@ -36,6 +36,7 @@ library
       IO.ChainIndex
       IO.Time
       IO.Wallet
+      Scripts.CommonValidators
       Scripts.OneShotCurrency
       Types.Error
       Types.Tx
