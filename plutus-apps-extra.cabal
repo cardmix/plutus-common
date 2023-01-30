@@ -38,6 +38,7 @@ library
       IO.Node
       IO.Time
       IO.Wallet
+      Scripts.CommonValidators
       Scripts.OneShotCurrency
       Types.Error
       Types.Tx
