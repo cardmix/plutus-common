@@ -34,6 +34,7 @@ library
       Constraints.OffChain
       Constraints.OnChain
       IO.ChainIndex
+      IO.Blockfrost
       IO.Kupo
       IO.Node
       IO.Time
@@ -44,6 +45,7 @@ library
       Types.Tx
       Utils.Address
       Utils.ChainIndex
+      Utils.Blockfrost
       Utils.Crypto
       Utils.Kupo
       Utils.Orphans
@@ -80,6 +82,7 @@ library
       flat                                   -any,
       hex-text                               -any,
       http-client                            -any,
+      http-client-tls                        -any,
       lens                                   -any,
       lens-aeson                             -any,
       memory                                 -any,
@@ -127,7 +130,8 @@ test-suite plutus-apps-extra-test
                         -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
   Main-Is:              Main.hs
   Other-Modules:        Tests.ChainIndex
-  Other-Modules:        Tests.Kupo
+                        Tests.Blockfrost
+                        Tests.Kupo
                         Tests.OnChain
                         Tests.Wallet
   Build-Depends:
@@ -136,6 +140,8 @@ test-suite plutus-apps-extra-test
     bytestring                             -any,
     cardano-addresses                      -any,
     cardano-api                            -any,
+    cardano-ledger-alonzo                  -any,
+    cardano-ledger-core                    -any,
     cardano-node-emulator                  -any,
     cardano-wallet-core                    -any,
     containers                             -any,
