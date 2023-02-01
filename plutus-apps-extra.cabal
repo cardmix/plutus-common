@@ -34,6 +34,8 @@ library
       Constraints.OffChain
       Constraints.OnChain
       IO.ChainIndex
+      IO.Kupo
+      IO.Node
       IO.Time
       IO.Wallet
       Scripts.CommonValidators
@@ -43,6 +45,7 @@ library
       Utils.Address
       Utils.ChainIndex
       Utils.Crypto
+      Utils.Kupo
       Utils.Orphans
       Utils.Tx
       Utils.Servant
@@ -82,6 +85,7 @@ library
       memory                                 -any,
       mtl                                    -any,
       openapi3                               -any,
+      ouroboros-network                      -any,
       plutus-chain-index                     -any,
       plutus-chain-index-core                -any,
       plutus-contract                        -any,
@@ -104,6 +108,7 @@ library
       servant                                -any,
       servant-client                         -any,
       servant-client-core                    -any,
+      stm                                    -any,
       text                                   -any,
       text-class                             -any,
       time                                   -any,
@@ -122,6 +127,7 @@ test-suite plutus-apps-extra-test
                         -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
   Main-Is:              Main.hs
   Other-Modules:        Tests.ChainIndex
+  Other-Modules:        Tests.Kupo
                         Tests.OnChain
                         Tests.Wallet
   Build-Depends:
