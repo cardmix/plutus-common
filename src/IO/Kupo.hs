@@ -19,15 +19,17 @@ import           Servant.API          (Get,JSON,(:>),Capture,(:<|>)((:<|>)),Quer
 import           Servant.Client       (client, ClientM)
 import           Types.Error          (ConnectionError)
 import           Utils.ChainIndex     (MapUTXO)
-import           Utils.Kupo           (KupoUTXOs, Kupo(..), SingleFromArray(..), KupoDecoratedTxOut(..))
+import           Utils.Kupo           (KupoUTXOs, Kupo(..), KupoDecoratedTxOut(..))
 import           Utils.Servant        (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
+import Data.Maybe (listToMaybe)
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = fromKupoUtxos <=< (getFromEndpointKupo . getKupoUtxosAt . Kupo)
 
-unspentTxOutFromRef :: TxOutRef -> IO DecoratedTxOut
-unspentTxOutFromRef = fromKupoDecoratedTxOut . coerce <=< (getFromEndpointKupo . getKupoUnspentTxOutFromRef . Kupo)
+unspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
+unspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=< 
+    (getFromEndpointKupo . getKupoUnspentTxOutFromRef . Kupo)
 
 getSciptByHash :: ScriptHash -> IO (Versioned Script)
 getSciptByHash = fmap coerce . getFromEndpointKupo . getKupoScriptByHash . Kupo
@@ -51,7 +53,7 @@ pattern KupoConnectionError req content <- ConnectionErrorOnPort 1442 req conten
 type GetUtxosAt         =
     "matches" :> Capture "pattern" (Kupo Address) :> QueryFlag "unspent" :> Get '[JSON] KupoUTXOs
 type UnspetTxOutFromRef =
-    "matches" :> Capture "pattern" (Kupo TxOutRef) :> QueryFlag "unspent" :> Get '[JSON] (SingleFromArray KupoDecoratedTxOut)
+    "matches" :> Capture "pattern" (Kupo TxOutRef) :> QueryFlag "unspent" :> Get '[JSON] [KupoDecoratedTxOut]
 type GetScriptByHash    =
     "scripts" :> Capture "script hash" (Kupo ScriptHash) :> Get '[JSON] (Kupo (Versioned Script))
 type GetValidatorByHash =
@@ -60,7 +62,7 @@ type GetDatumByHash     =
     "datums"  :> Capture "datum hash" (Kupo DatumHash) :> Get '[JSON] (Kupo Datum)
 
 getKupoUtxosAt             :: Kupo Address       -> ClientM KupoUTXOs
-getKupoUnspentTxOutFromRef :: Kupo TxOutRef      -> ClientM (SingleFromArray KupoDecoratedTxOut)
+getKupoUnspentTxOutFromRef :: Kupo TxOutRef      -> ClientM [KupoDecoratedTxOut]
 getKupoScriptByHash        :: Kupo ScriptHash    -> ClientM (Kupo (Versioned Script))
 getKupoValidatorByHash     :: Kupo ValidatorHash -> ClientM (Kupo (Versioned Validator))
 getKupoDatumByHash         :: Kupo DatumHash     -> ClientM (Kupo Datum)

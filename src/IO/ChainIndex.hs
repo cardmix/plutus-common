@@ -1,43 +1,36 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE NumericUnderscores         #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE PatternSynonyms            #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE NumericUnderscores   #-}
+{-# LANGUAGE PatternSynonyms      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TupleSections        #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module IO.ChainIndex where
 
-import           Cardano.Api                       (FromJSON, ToJSON)
-import           Control.Applicative               (Applicative(..))
-import           Control.Monad.Extra               (mconcatMapM)
-import           Control.Monad.IO.Class            (MonadIO(..))
-import           Data.Default                      (Default (def))
-import           Data.Map                          (Map)
-import qualified Data.Map                          as Map
-import           GHC.Generics                      (Generic)
-import           IO.Time                           (currentTime)
-import           Ledger                            (Address, DecoratedTxOut(..), TxOutRef (..), POSIXTime)
-import           Network.HTTP.Client               (HttpExceptionContent, Request)
-import           Plutus.ChainIndex                 (ChainIndexTx, Page(..), PageQuery)
-import           Plutus.ChainIndex.Api             (UtxoAtAddressRequest(..), UtxosResponse(..))
-import qualified Plutus.ChainIndex.Client          as Client
-import           PlutusTx.Prelude                  hiding ((<>), (<$>), pure, traverse, fmap, mapM, mconcat)
-import           Plutus.V1.Ledger.Address          (Address(addressCredential) )
-import           Prelude                           (Show(..), IO, (<$>), (<>), traverse, fmap)
+import           Cardano.Api              (FromJSON, ToJSON)
+import           Control.Applicative      (Applicative (..))
+import           Control.Monad.Extra      (mconcatMapM)
+import           Control.Monad.IO.Class   (MonadIO (..))
+import           Data.Default             (Default (def))
+import           Data.Map                 (Map)
+import qualified Data.Map                 as Map
+import           GHC.Generics             (Generic)
+import           IO.Time                  (currentTime)
+import           Ledger                   (Address, DecoratedTxOut (..), POSIXTime, TxOutRef (..))
+import           Network.HTTP.Client      (HttpExceptionContent, Request)
+import           Plutus.ChainIndex        (ChainIndexTx, Page (..), PageQuery)
+import           Plutus.ChainIndex.Api    (UtxoAtAddressRequest (..), UtxosResponse (..))
+import qualified Plutus.ChainIndex.Client as Client
+import           Plutus.V1.Ledger.Address (Address (addressCredential))
+import           PlutusTx.Prelude         hiding (fmap, mapM, mconcat, pure, traverse, (<$>), (<>))
+import           Prelude                  (IO, Show (..), fmap, traverse, (<$>), (<>))
 
-import           Utils.ChainIndex                  (MapUTXO)
-import           Utils.Servant                     (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
-import           Types.Error                       (ConnectionError)
+import           Data.Maybe               (catMaybes)
+import           Types.Error              (ConnectionError)
+import           Utils.ChainIndex         (MapUTXO)
+import           Utils.Servant            (Endpoint, getFromEndpointOnPort, handle404, pattern ConnectionErrorOnPort)
 
 ----------------------------------- Chain index cache -----------------------------------
 
@@ -77,7 +70,7 @@ pattern ChainIndexConnectionError req content <- ConnectionErrorOnPort 9083 req 
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO
-getUtxosAt = foldUtxoRefsAt f Map.empty
+getUtxosAt addr = Map.mapMaybe id <$> foldUtxoRefsAt f Map.empty addr
     where
         f acc page' = do
           let utxoRefs = pageItems page'
@@ -93,7 +86,7 @@ getUtxosTxsAt addr = do
         refTxOuts <- Map.toList <$> foldUtxoRefsAt f Map.empty addr
         let txIds = map (txOutRefId . fst) refTxOuts
         ciTxs <- getFromEndpointChainIndex $ Client.getTxs txIds
-        pure $ Map.fromList $ zipWith (fmap . flip (,)) ciTxs refTxOuts
+        pure $ Map.fromList $ catMaybes $ zipWith (\tx (ref, mbTxOut) -> (ref,) . (,tx) <$> mbTxOut) ciTxs refTxOuts
     where
         f acc page' = do
             let utxoRefs = pageItems page'
@@ -118,8 +111,8 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
             newAcc <- f acc page'
             go newAcc (nextPageQuery page')
 
-unspentTxOutFromRef :: TxOutRef -> IO DecoratedTxOut
-unspentTxOutFromRef = getFromEndpointChainIndex . Client.getUnspentTxOut
+unspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
+unspentTxOutFromRef = handle404 (pure Nothing) . fmap Just . getFromEndpointChainIndex . Client.getUnspentTxOut
 
 -- Get the unspent transaction output references at an address.
 utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse

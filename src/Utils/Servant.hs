@@ -2,16 +2,19 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Utils.Servant where
 
-import           Control.Arrow                     ((&&&))
-import           Control.Monad.Catch               (Exception(..), throwM)
-import           Control.Monad.IO.Class            (MonadIO(..))
-import           Servant.Client                    (mkClientEnv, runClientM, ClientM, BaseUrl(..), Scheme(..))
-import qualified Servant.Client                    as Servant
-import           Network.HTTP.Client               (newManager, defaultManagerSettings, HttpException(..), Request(port), HttpExceptionContent)
-import           Types.Error                       (ConnectionError(..))
+import           Control.Arrow             ((&&&))
+import           Control.Monad.Catch       (Exception (..), MonadCatch, handle, throwM)
+import           Control.Monad.IO.Class    (MonadIO (..))
+import           Network.HTTP.Client       (HttpException (..), HttpExceptionContent (..), Request (port), defaultManagerSettings,
+                                            newManager)
+import           Network.HTTP.Types.Status (Status (statusCode))
+import           Servant.Client            (BaseUrl (..), ClientM, Scheme (..), mkClientEnv, runClientM)
+import qualified Servant.Client            as Servant
+import           Types.Error               (ConnectionError (..))
 
 type Endpoint a = forall m. MonadIO m => ClientM a -> m a
 
@@ -29,3 +32,8 @@ getFromEndpointOnPort p endpoint = liftIO $ do
 
 pattern ConnectionErrorOnPort :: Int -> Request -> HttpExceptionContent -> ConnectionError
 pattern ConnectionErrorOnPort port req c <- ConnectionError (id &&& port -> (req, port)) c
+
+handle404 :: MonadCatch m => m a -> m a -> m a
+handle404 h = handle $ \case
+    Servant.FailureResponse _ ((statusCode . Servant.responseStatusCode -> 404)) -> h
+    e                                                                            -> throwM e

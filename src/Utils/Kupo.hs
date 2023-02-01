@@ -129,16 +129,6 @@ instance FromJSON (Kupo Value) where
                     _ -> mzero
             toBbs = maybe (fail "not a hex") (pure . toBuiltin) . decodeHex . T.pack
 
-
--- Kupo responds with array to every request
-newtype SingleFromArray a = SingleFromArray a
-    deriving newtype Show
-
-instance FromJSON a => FromJSON (SingleFromArray a) where
-    parseJSON = \case
-        (J.Array [o]) -> SingleFromArray <$> parseJSON o
-        _             -> fail "not a single element array"
-
 -------------------------------------------- ToHttpApiData instances --------------------------------------------
 
 instance ToHttpApiData (Kupo TxOutRef) where
