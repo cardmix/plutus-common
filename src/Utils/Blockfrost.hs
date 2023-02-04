@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Utils.Blockfrost where
 import           Cardano.Api         (SerialiseAddress (serialiseAddress), StakeAddress, TxId (..))
@@ -70,6 +71,13 @@ instance FromJSON TxUtxoResponseInput where
 newtype Bf a = Bf a
 
 deriving newtype instance Show a => Show (Bf a)
+
+data BfOrder = Asc | Desc
+
+instance ToHttpApiData BfOrder where
+    toUrlPiece = \case
+        Asc  -> "asc"
+        Desc -> "desc"
 
 instance ToHttpApiData (Bf StakeAddress) where
     toUrlPiece (Bf addr) = serialiseAddress addr

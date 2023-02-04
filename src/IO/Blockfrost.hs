@@ -15,13 +15,13 @@ import           Data.Maybe              (listToMaybe)
 import           Ledger                  (Address, StakePubKeyHash (..))
 import           Network.HTTP.Client     (HttpException (..), newManager)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
-import           Servant.API             (Capture, Get, Header, JSON, (:<|>) ((:<|>)), (:>))
+import           Servant.API             (Capture, Get, Header, JSON, (:<|>) ((:<|>)), (:>), QueryParam)
 import           Servant.Client          (BaseUrl (..), ClientM, Scheme (..), client, mkClientEnv, runClientM)
 import qualified Servant.Client          as Servant
 import           Types.Error             (ConnectionError (..))
 import           Utils.Address           (spkhToStakeCredential)
 import           Utils.Blockfrost        (AccDelegationHistoryResponse (..), Bf (..), TxDelegationsCertsResponse,
-                                          TxUtxoResponse (..), TxUtxoResponseInput (..))
+                                          TxUtxoResponse (..), TxUtxoResponseInput (..), BfOrder (..))
 
 tokenFilePath :: FilePath
 tokenFilePath = "testnet/preview/blockfrost.token"
@@ -36,13 +36,21 @@ getAddressFromStakePubKeyHash net poolId spkh = do
     txHash    <- maybe (error "") (pure . adhrTxHash) $ find ((== poolId) . adhrPoolId) history
     fmap turiAddress . listToMaybe . turInputs <$> getTxUtxo txHash
 
+getStakeAddressLastPool :: StakeAddress -> IO (Maybe PoolId)
+getStakeAddressLastPool stakeAddr = fmap adhrPoolId . listToMaybe <$> getAccountDelegationHistory stakeAddr
+
+getAddressFromStakeAddress :: StakeAddress -> IO (Maybe Address)
+getAddressFromStakeAddress stakeAddr = do
+    txId <- fmap adhrTxHash . listToMaybe <$> getAccountDelegationHistory stakeAddr
+    maybe (pure Nothing) (fmap (fmap turiAddress . listToMaybe . turInputs) . getTxUtxo) txId
+
 --------------------------------------------------- Blockfrost API ---------------------------------------------------
 
 getTxUtxo :: TxId -> IO TxUtxoResponse
 getTxUtxo txId = getFromEndpointBF $ withBfToken $ \t -> getBfTxUtxo t $ Bf txId
 
 getAccountDelegationHistory :: StakeAddress -> IO [AccDelegationHistoryResponse]
-getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBfAccDelegationHistory t $ Bf addr
+getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBfAccDelegationHistory t (Bf addr) (Just Desc)
 
 type BfToken = Maybe String
 
@@ -70,13 +78,13 @@ type BlockfrostAPI = "api" :> "v0" :>
 type Auth = Header "project_id" String
 
 type GetAccDelegationHistory
-    = Auth :> "accounts" :> Capture "Stake address" (Bf StakeAddress) :> "delegations" :> Get '[JSON] [AccDelegationHistoryResponse]
+    = Auth :> "accounts" :> Capture "Stake address" (Bf StakeAddress) :> "delegations" :> QueryParam "order" BfOrder :> Get '[JSON] [AccDelegationHistoryResponse]
 type GetTxDelegationCerts
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "delegations" :> Get '[JSON] TxDelegationsCertsResponse
 type GetTxUtxo
-    = Auth :> "txs" :> Capture "Tx has" (Bf TxId) :> "utxos" :> Get '[JSON] TxUtxoResponse
+    = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "utxos" :> Get '[JSON] TxUtxoResponse
 
-getBfAccDelegationHistory :: BfToken -> Bf StakeAddress -> ClientM [AccDelegationHistoryResponse]
+getBfAccDelegationHistory :: BfToken -> Bf StakeAddress -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
 getBfTxDelegationCerts    :: BfToken -> Bf TxId         -> ClientM TxDelegationsCertsResponse
 getBfTxUtxo               :: BfToken -> Bf TxId         -> ClientM TxUtxoResponse
 

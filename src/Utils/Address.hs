@@ -51,7 +51,7 @@ bech32ToStakeAddress = deserialiseAddress AsStakeAddress
 
 -- Convert Plutus Address to bech32 text
 addressToBech32 :: NetworkId -> Address -> Maybe Text
-addressToBech32 networdId = fmap serialiseAddress . eitherToMaybe . toCardanoAddressInEra networdId
+addressToBech32 networkId = fmap serialiseAddress . eitherToMaybe . toCardanoAddressInEra networkId
 
 -- Convert bech32 Stake address to a Plutus StakePubKeyHash.
 bech32ToStakePubKeyHash :: Text -> Maybe StakePubKeyHash
