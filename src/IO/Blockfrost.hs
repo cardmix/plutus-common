@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE ViewPatterns     #-}
@@ -7,21 +8,27 @@ module IO.Blockfrost where
 
 import           Cardano.Api             (NetworkId (..), StakeAddress, TxId, makeStakeAddress)
 import           Cardano.Api.Shelley     (PoolId)
+import           Control.Applicative     ((<|>))
+import           Control.Monad           (foldM)
 import           Control.Monad.Catch     (Exception (..), MonadThrow (..))
 import           Control.Monad.IO.Class  (MonadIO (..))
 import           Data.Data               (Proxy (..))
 import           Data.Foldable           (find)
+import           Data.Functor            ((<&>))
+import qualified Data.Map                as Map
 import           Data.Maybe              (listToMaybe)
-import           Ledger                  (Address, StakePubKeyHash (..))
+import           Ledger                  (Address, MintingPolicyHash (..), StakePubKeyHash (..))
+import           Ledger.Value            (CurrencySymbol (CurrencySymbol))
 import           Network.HTTP.Client     (HttpException (..), newManager)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
-import           Servant.API             (Capture, Get, Header, JSON, (:<|>) ((:<|>)), (:>), QueryParam)
+import           Servant.API             (Capture, Get, Header, JSON, QueryParam, (:<|>) ((:<|>)), (:>))
 import           Servant.Client          (BaseUrl (..), ClientM, Scheme (..), client, mkClientEnv, runClientM)
 import qualified Servant.Client          as Servant
 import           Types.Error             (ConnectionError (..))
 import           Utils.Address           (spkhToStakeCredential)
-import           Utils.Blockfrost        (AccDelegationHistoryResponse (..), Bf (..), TxDelegationsCertsResponse,
-                                          TxUtxoResponse (..), TxUtxoResponseInput (..), BfOrder (..))
+import           Utils.Blockfrost        (AccDelegationHistoryResponse (..), AssetHistoryResponse (..), Bf (..),
+                                          BfMintingPolarity (..), BfOrder (..), TxDelegationsCertsResponse,
+                                          TxUTxoResponseOutput (..), TxUtxoResponse (..), TxUtxoResponseInput (..))
 
 tokenFilePath :: FilePath
 tokenFilePath = "testnet/preview/blockfrost.token"
@@ -44,6 +51,15 @@ getAddressFromStakeAddress stakeAddr = do
     txId <- fmap adhrTxHash . listToMaybe <$> getAccountDelegationHistory stakeAddr
     maybe (pure Nothing) (fmap (fmap turiAddress . listToMaybe . turInputs) . getTxUtxo) txId
 
+-- find tx id where address have minted specific amount of asset
+verifyAsset :: MintingPolicyHash -> Integer -> Address -> IO (Maybe TxId)
+verifyAsset mp@(MintingPolicyHash h) amount addr = do
+    history <- filter (\AssetHistoryResponse{..} -> ahrMintingPolarity == BfMint && ahrAmount == amount) <$> getAssetHistory mp
+    foldM (\res (ahrTxHash -> txId) -> pure res <|> (getTxUtxo txId <&> findOutput txId . turOutputs)) Nothing history
+    where
+        findOutput txId outs = const (Just txId) =<< find (\o -> turoAddress o == addr &&  Map.lookup cs (turoAmount o) == Just amount) outs
+        cs = CurrencySymbol h
+
 --------------------------------------------------- Blockfrost API ---------------------------------------------------
 
 getTxUtxo :: TxId -> IO TxUtxoResponse
@@ -51,6 +67,9 @@ getTxUtxo txId = getFromEndpointBF $ withBfToken $ \t -> getBfTxUtxo t $ Bf txId
 
 getAccountDelegationHistory :: StakeAddress -> IO [AccDelegationHistoryResponse]
 getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBfAccDelegationHistory t (Bf addr) (Just Desc)
+
+getAssetHistory :: MintingPolicyHash -> IO [AssetHistoryResponse]
+getAssetHistory mph = getFromEndpointBF $ withBfToken $ \t -> getBfAssetHistory t (Bf mph)
 
 type BfToken = Maybe String
 
@@ -73,6 +92,7 @@ type BlockfrostAPI = "api" :> "v0" :>
     (    GetAccDelegationHistory
     :<|> GetTxDelegationCerts
     :<|> GetTxUtxo
+    :<|> GetAssetHistory
     )
 
 type Auth = Header "project_id" String
@@ -83,15 +103,19 @@ type GetTxDelegationCerts
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "delegations" :> Get '[JSON] TxDelegationsCertsResponse
 type GetTxUtxo
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "utxos" :> Get '[JSON] TxUtxoResponse
+type GetAssetHistory
+    = Auth :> "assets" :> Capture "Policy id" (Bf MintingPolicyHash) :> "history" :> Get '[JSON] [AssetHistoryResponse]
 
-getBfAccDelegationHistory :: BfToken -> Bf StakeAddress -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
-getBfTxDelegationCerts    :: BfToken -> Bf TxId         -> ClientM TxDelegationsCertsResponse
-getBfTxUtxo               :: BfToken -> Bf TxId         -> ClientM TxUtxoResponse
+getBfAccDelegationHistory :: BfToken -> Bf StakeAddress      -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
+getBfTxDelegationCerts    :: BfToken -> Bf TxId                               -> ClientM TxDelegationsCertsResponse
+getBfTxUtxo               :: BfToken -> Bf TxId                               -> ClientM TxUtxoResponse
+getBfAssetHistory         :: BfToken -> Bf MintingPolicyHash                  -> ClientM [AssetHistoryResponse]
 
-(getBfAccDelegationHistory, getBfTxDelegationCerts, getBfTxUtxo)
-    = (getBfAccDelegationHistory_, getBfTxDelegationCerts_, getBfTxUtxo_)
+(getBfAccDelegationHistory, getBfTxDelegationCerts, getBfTxUtxo, getBfAssetHistory)
+    = (getBfAccDelegationHistory_, getBfTxDelegationCerts_, getBfTxUtxo_, getBfAssetHistory_)
     where
         getBfAccDelegationHistory_
             :<|> getBfTxDelegationCerts_
-            :<|> getBfTxUtxo_ = do
+            :<|> getBfTxUtxo_
+            :<|> getBfAssetHistory_ = do
                 client (Proxy @BlockfrostAPI)
