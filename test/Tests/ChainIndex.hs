@@ -3,11 +3,11 @@
 
 module Tests.ChainIndex where
 
-import IO.ChainIndex
-import Utils.Address
-import Data.Text (Text)
-import qualified Data.Map as Map
-import Ledger.Tx
+import qualified Data.Map                      as Map
+import           Data.Text                     (Text)
+import           Ledger.Tx
+import           PlutusAppsExtra.IO.ChainIndex
+import           PlutusAppsExtra.Utils.Address
 
 testAllAddr :: IO ()
 testAllAddr = do

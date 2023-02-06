@@ -1,25 +1,25 @@
-{-# LANGUAGE LambdaCase                  #-}
-{-# LANGUAGE OverloadedStrings           #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Tests.Blockfrost where
 
-import           Cardano.Api                  (AsType (..), Hash, NetworkId (..), NetworkMagic (..), SerialiseAsRawBytes (..),
-                                               StakeAddress (..), StakeKey, TxId, deserialiseFromBech32)
-import           Cardano.Api.Shelley          (PoolId, StakeAddress (..), StakeCredential (..))
-import           Cardano.Ledger.Alonzo.TxInfo (transKeyHash)
-import qualified Cardano.Ledger.Credential    as Cred
-import           Cardano.Ledger.Crypto        (StandardCrypto)
-import           Cardano.Ledger.Keys          (KeyHash (..))
-import           Data.Maybe                   (fromJust)
-import           Data.String                  (fromString)
-import           Data.Text                    (Text)
-import           IO.Blockfrost                (getAddressFromStakePubKeyHash, verifyAsset)
-import           Ledger                       (Address, MintingPolicyHash (..), PubKeyHash (..),
-                                               StakePubKeyHash (StakePubKeyHash), stakePubKeyHashCredential, stakingCredential)
-import           Plutus.V1.Ledger.Api         (fromBuiltin, toBuiltin)
-import qualified Text.Hex                     as T
-import           Utils.Address                (bech32ToAddress, bech32ToStakeAddress)
+import           Cardano.Api                   (AsType (..), Hash, NetworkId (..), NetworkMagic (..), SerialiseAsRawBytes (..),
+                                                StakeAddress (..), StakeKey, TxId, deserialiseFromBech32)
+import           Cardano.Api.Shelley           (PoolId, StakeAddress (..), StakeCredential (..))
+import           Cardano.Ledger.Alonzo.TxInfo  (transKeyHash)
+import qualified Cardano.Ledger.Credential     as Cred
+import           Cardano.Ledger.Crypto         (StandardCrypto)
+import           Cardano.Ledger.Keys           (KeyHash (..))
+import           Data.Maybe                    (fromJust)
+import           Data.String                   (fromString)
+import           Data.Text                     (Text)
+import           Ledger                        (Address, MintingPolicyHash (..), PubKeyHash (..),
+                                                StakePubKeyHash (StakePubKeyHash), stakePubKeyHashCredential, stakingCredential)
+import           Plutus.V1.Ledger.Api          (fromBuiltin, toBuiltin)
+import           PlutusAppsExtra.IO.Blockfrost (getAddressFromStakePubKeyHash, verifyAsset)
+import           PlutusAppsExtra.Utils.Address (bech32ToAddress, bech32ToStakeAddress)
+import qualified Text.Hex                      as T
 
 toStake :: Text -> StakeAddress
 toStake = fromJust . bech32ToStakeAddress 

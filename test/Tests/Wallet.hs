@@ -1,36 +1,37 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Tests.Wallet where
 
-import           Cardano.Api.Shelley                 (NetworkId(..), ProtocolParameters (..), NetworkMagic(..))
-import           Cardano.Mnemonic                    (MkSomeMnemonic(..))
-import           Cardano.Node.Emulator.Params        (Params(..))
-import           Cardano.Wallet.Primitive.Passphrase (Passphrase(..))
-import           Cardano.Wallet.Primitive.Types      (WalletId(..))
+import           Cardano.Api.Shelley                 (NetworkId (..), NetworkMagic (..), ProtocolParameters (..))
+import           Cardano.Mnemonic                    (MkSomeMnemonic (..))
+import           Cardano.Node.Emulator.Params        (Params (..))
+import           Cardano.Wallet.Primitive.Passphrase (Passphrase (..))
+import           Cardano.Wallet.Primitive.Types      (WalletId (..))
 import           Data.Aeson                          (decode)
 import           Data.ByteString.Lazy                (readFile)
+import           Data.Default                        (Default (..))
 import           Data.Either                         (fromRight)
-import           Data.Default                        (Default(..))
 import           Data.Maybe                          (fromJust)
-import           Data.String                         (IsString(fromString))
+import           Data.String                         (IsString (fromString))
 import           Data.Text                           (Text)
 import qualified Data.Text                           as T
-import           IO.Wallet                           (HasWallet(..), getWalletTxOutRefs, genWalletId, restoreWalletFromFile, walletIdFromFile)
 import           Ledger                              (TxOutRef, stakingCredential)
+import           PlutusAppsExtra.IO.Wallet           (HasWallet (..), genWalletId, getWalletTxOutRefs, restoreWalletFromFile,
+                                                      walletIdFromFile)
+import           PlutusAppsExtra.Utils.Address       (bech32ToAddress, bech32ToKeyHashes)
 import           Prelude                             hiding (readFile)
-import           Utils.Address                       (bech32ToKeyHashes, bech32ToAddress)
 
 instance HasWallet IO where
     getRestoredWallet = restoreWalletFromFile "testnet/wallet.json"

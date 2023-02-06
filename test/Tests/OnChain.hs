@@ -11,21 +11,21 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE TupleSections              #-}
 
 module Tests.OnChain where
 
 import           Ledger.Typed.Scripts                 (IsScriptContext (..))
-import           Plutus.Script.Utils.V2.Typed.Scripts (ValidatorTypes (..), TypedValidator, mkTypedValidator)
-import           Plutus.V2.Ledger.Api                 (ScriptContext(..), MintingPolicy, TokenName (..), mkMintingPolicyScript)
+import           Plutus.Script.Utils.V2.Typed.Scripts (TypedValidator, ValidatorTypes (..), mkTypedValidator)
+import           Plutus.V2.Ledger.Api                 (MintingPolicy, ScriptContext (..), TokenName (..), mkMintingPolicyScript)
 import           PlutusTx                             (compile)
 import           PlutusTx.AssocMap                    (fromList)
-import           PlutusTx.Prelude                     (BuiltinByteString, Bool (..), ($), map)
+import           PlutusTx.Prelude                     (Bool (..), BuiltinByteString, map, ($))
 
-import           Constraints.OnChain                  (tokensMinted)
+import           PlutusAppsExtra.Constraints.OnChain  (tokensMinted)
 
 
 ------------------------------------- Test Minting Policy --------------------------------------
