@@ -20,7 +20,7 @@ import           Control.Monad.Catch              (MonadThrow (..))
 import qualified Data.Aeson                       as J
 import           Data.Text                        (Text)
 import           GHC.Generics                     (Generic)
-import           Ledger                           (CardanoTx, Address)
+import           Ledger                           (CardanoTx, Address, Ada)
 import           Network.HTTP.Client              (Request, HttpExceptionContent)
 import           Prelude                          
 
@@ -44,6 +44,7 @@ data MkTxError
     | CantExtractTxOutRefsFromEmulatorTx
     | ConvertApiSerialisedTxToCardanoTxError ApiSerialisedTransaction
     | ConvertCardanoTxToSealedTxError CardanoTx
+    | NotEnoughFunds Ada
     | UnbuildableTxOut
     | UnbuildableExportTx
     | UnbuildableUnbalancedTx
