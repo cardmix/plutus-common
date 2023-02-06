@@ -30,25 +30,27 @@ common lang
 library
     import: lang
     exposed-modules:
-      Constraints.Balance
-      Constraints.OffChain
-      Constraints.OnChain
-      IO.ChainIndex
-      IO.Kupo
-      IO.Node
-      IO.Time
-      IO.Wallet
-      Scripts.CommonValidators
-      Scripts.OneShotCurrency
-      Types.Error
-      Types.Tx
-      Utils.Address
-      Utils.ChainIndex
-      Utils.Crypto
-      Utils.Kupo
-      Utils.Orphans
-      Utils.Tx
-      Utils.Servant
+      PlutusAppsExtra.Constraints.Balance
+      PlutusAppsExtra.Constraints.OffChain
+      PlutusAppsExtra.Constraints.OnChain
+      PlutusAppsExtra.IO.ChainIndex
+      PlutusAppsExtra.IO.Blockfrost
+      PlutusAppsExtra.IO.Kupo
+      PlutusAppsExtra.IO.Node
+      PlutusAppsExtra.IO.Time
+      PlutusAppsExtra.IO.Wallet
+      PlutusAppsExtra.Scripts.CommonValidators
+      PlutusAppsExtra.Scripts.OneShotCurrency
+      PlutusAppsExtra.Types.Error
+      PlutusAppsExtra.Types.Tx
+      PlutusAppsExtra.Utils.Address
+      PlutusAppsExtra.Utils.ChainIndex
+      PlutusAppsExtra.Utils.Blockfrost
+      PlutusAppsExtra.Utils.Crypto
+      PlutusAppsExtra.Utils.Kupo
+      PlutusAppsExtra.Utils.Orphans
+      PlutusAppsExtra.Utils.Tx
+      PlutusAppsExtra.Utils.Servant
     build-depends:
       base                          >= 4.9 && < 5,
       base16-bytestring                      -any,
@@ -80,6 +82,8 @@ library
       flat                                   -any,
       hex-text                               -any,
       http-client                            -any,
+      http-client-tls                        -any,
+      http-types                             -any,
       lens                                   -any,
       lens-aeson                             -any,
       memory                                 -any,
@@ -112,6 +116,7 @@ library
       text                                   -any,
       text-class                             -any,
       time                                   -any,
+      transformers                           -any,
       generic-arbitrary                      -any,
       prettyprinter                          -any,
       QuickCheck                             -any,
@@ -127,7 +132,8 @@ test-suite plutus-apps-extra-test
                         -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
   Main-Is:              Main.hs
   Other-Modules:        Tests.ChainIndex
-  Other-Modules:        Tests.Kupo
+                        Tests.Blockfrost
+                        Tests.Kupo
                         Tests.OnChain
                         Tests.Wallet
   Build-Depends:
@@ -136,6 +142,8 @@ test-suite plutus-apps-extra-test
     bytestring                             -any,
     cardano-addresses                      -any,
     cardano-api                            -any,
+    cardano-ledger-alonzo                  -any,
+    cardano-ledger-core                    -any,
     cardano-node-emulator                  -any,
     cardano-wallet-core                    -any,
     containers                             -any,

@@ -1,28 +1,28 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 
-module Types.Error where
+module PlutusAppsExtra.Types.Error where
 
-import           Cardano.Api                      (FromJSON, ToJSON)
-import           Cardano.Wallet.Api.Types         (ApiSerialisedTransaction)
-import           Cardano.Wallet.Primitive.Types   (WalletId)
-import           Control.Exception                (Exception)
-import           Control.Monad.Catch              (MonadThrow (..))
-import qualified Data.Aeson                       as J
-import           Data.Text                        (Text)
-import           GHC.Generics                     (Generic)
-import           Ledger                           (CardanoTx, Address)
-import           Network.HTTP.Client              (Request, HttpExceptionContent)
-import           Prelude                          
+import           Cardano.Api                    (FromJSON, ToJSON)
+import           Cardano.Wallet.Api.Types       (ApiSerialisedTransaction)
+import           Cardano.Wallet.Primitive.Types (WalletId)
+import           Control.Exception              (Exception)
+import           Control.Monad.Catch            (MonadThrow (..))
+import qualified Data.Aeson                     as J
+import           Data.Text                      (Text)
+import           GHC.Generics                   (Generic)
+import           Ledger                         (Ada, Address, CardanoTx)
+import           Network.HTTP.Client            (HttpExceptionContent, Request)
+import           Prelude
 
 data ConnectionError = ConnectionError Request HttpExceptionContent
     deriving (Show, Exception)
@@ -44,6 +44,7 @@ data MkTxError
     | CantExtractTxOutRefsFromEmulatorTx
     | ConvertApiSerialisedTxToCardanoTxError ApiSerialisedTransaction
     | ConvertCardanoTxToSealedTxError CardanoTx
+    | NotEnoughFunds Ada
     | UnbuildableTxOut
     | UnbuildableExportTx
     | UnbuildableUnbalancedTx

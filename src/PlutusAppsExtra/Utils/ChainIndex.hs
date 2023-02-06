@@ -1,15 +1,15 @@
+{-# LANGUAGE LambdaCase    #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE LambdaCase #-}
 
-module Utils.ChainIndex where
+module PlutusAppsExtra.Utils.ChainIndex where
 
 import           Cardano.Node.Emulator.Params (Params (..))
 import           Control.Monad.Catch          (MonadThrow)
 import qualified Data.Map                     as Map
-import           Ledger                       (TxOutRef(..), DecoratedTxOut(..), TxOut, toTxOut)
+import           Ledger                       (DecoratedTxOut (..), TxOut, TxOutRef (..), toTxOut)
 import           Ledger.Value                 (adaOnlyValue)
 
-import           Types.Error                  (throwEither, MkTxError(..))
+import           PlutusAppsExtra.Types.Error  (MkTxError (..), throwEither)
 
 type MapUTXO = Map.Map TxOutRef DecoratedTxOut
 

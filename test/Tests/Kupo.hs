@@ -2,15 +2,15 @@
 
 module Tests.Kupo where
 
-import           Data.Function        (on)
-import           Data.Maybe           (fromJust)
-import           Data.Text            (Text)
-import qualified IO.ChainIndex        as CI
-import qualified IO.Kupo              as Kupo
-import           Ledger               (DecoratedTxOut(..), TxId(..), TxOutRef(..), Address)  
-import           Plutus.V1.Ledger.Api (toBuiltin)
-import qualified Text.Hex             as T
-import           Utils.Address        (bech32ToAddress)
+import           Data.Function                 (on)
+import           Data.Maybe                    (fromJust)
+import           Data.Text                     (Text)
+import           Ledger                        (Address, DecoratedTxOut (..), TxId (..), TxOutRef (..))
+import           Plutus.V1.Ledger.Api          (toBuiltin)
+import qualified PlutusAppsExtra.IO.ChainIndex as CI
+import qualified PlutusAppsExtra.IO.Kupo       as Kupo
+import           PlutusAppsExtra.Utils.Address (bech32ToAddress)
+import qualified Text.Hex                      as T
 
 getUtxosAt :: Text -> IO ()
 getUtxosAt bech32 = do

@@ -1,71 +1,77 @@
-{-# LANGUAGE AllowAmbiguousTypes          #-}
-{-# LANGUAGE DataKinds                    #-}
-{-# LANGUAGE DeriveGeneric                #-}
-{-# LANGUAGE DerivingStrategies           #-}
-{-# LANGUAGE FlexibleContexts             #-}
-{-# LANGUAGE FlexibleInstances            #-}
-{-# LANGUAGE LambdaCase                   #-}
-{-# LANGUAGE MultiParamTypeClasses        #-}
-{-# LANGUAGE NumericUnderscores           #-}
-{-# LANGUAGE OverloadedStrings            #-}
-{-# LANGUAGE PatternSynonyms              #-}
-{-# LANGUAGE RecordWildCards              #-}
-{-# LANGUAGE ScopedTypeVariables          #-}
-{-# LANGUAGE TypeApplications             #-}
-{-# LANGUAGE TypeFamilies                 #-}
-{-# LANGUAGE ViewPatterns                 #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumericUnderscores    #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ViewPatterns          #-}
 
-module IO.Wallet where
+module PlutusAppsExtra.IO.Wallet where
 
-import           Cardano.Mnemonic                                   (SomeMnemonic, MkSomeMnemonic(..))
+import           Cardano.Mnemonic                                   (MkSomeMnemonic (..), SomeMnemonic)
 import           Cardano.Node.Emulator                              (Params)
 import qualified Cardano.Wallet.Api.Client                          as Client
-import           Cardano.Wallet.Api.Types                           (ApiSerialisedTransaction(..), ApiT(..), ApiTxId(..),
-                                                                     ApiSignTransactionPostData(ApiSignTransactionPostData), ApiWallet())
-import           Cardano.Wallet.Api.Types.SchemaMetadata            (TxMetadataSchema(..))
+import           Cardano.Wallet.Api.Types                           (ApiSerialisedTransaction (..),
+                                                                     ApiSignTransactionPostData (ApiSignTransactionPostData),
+                                                                     ApiT (..), ApiTxId (..), ApiWallet)
+import           Cardano.Wallet.Api.Types.SchemaMetadata            (TxMetadataSchema (..))
 import           Cardano.Wallet.LocalClient.ExportTx                (export)
-import           Cardano.Wallet.Primitive.AddressDerivation         (WalletKey(digest, publicKey))
+import           Cardano.Wallet.Primitive.AddressDerivation         (WalletKey (digest, publicKey))
 import           Cardano.Wallet.Primitive.AddressDerivation.Shelley (generateKeyFromSeed)
 import           Cardano.Wallet.Primitive.Passphrase                (Passphrase (..), currentPassphraseScheme, preparePassphrase)
-import           Cardano.Wallet.Primitive.Types                     (WalletId(WalletId))
-import           Cardano.Wallet.Primitive.Types.Address             (AddressState(..))
+import           Cardano.Wallet.Primitive.Types                     (WalletId (WalletId))
+import           Cardano.Wallet.Primitive.Types.Address             (AddressState (..))
 import           Control.Concurrent                                 (threadDelay)
-import           Control.Lens                                       ((<&>), (^?), (^.))
-import           Control.Monad                                      (void, unless)
-import           Control.Monad.Catch                                (MonadThrow(..))
-import           Control.Monad.IO.Class                             (MonadIO(..))
-import           Data.Aeson                                         (FromJSON(..), ToJSON(..), (.:), eitherDecode, withObject)
-import           Data.Aeson.Lens                                    (key, _String)
+import           Control.Lens                                       ((<&>), (^.), (^?))
+import           Control.Monad                                      (unless, void)
+import           Control.Monad.Catch                                (MonadThrow (..))
+import           Control.Monad.IO.Class                             (MonadIO (..))
+import           Data.Aeson                                         (FromJSON (..), ToJSON (..), eitherDecode, withObject, (.:))
+import           Data.Aeson.Lens                                    (_String, key)
 import qualified Data.ByteString.Lazy                               as LB
 import           Data.Coerce                                        (coerce)
 import qualified Data.Map                                           as Map
 import           Data.Maybe                                         (mapMaybe)
-import           Data.String                                        (IsString(..))
+import           Data.String                                        (IsString (..))
 import           Data.Text                                          (Text)
 import qualified Data.Text                                          as T
-import           Data.Text.Class                                    (FromText(fromText))
+import           Data.Text.Class                                    (FromText (fromText))
 import           Data.Void                                          (Void)
 import           GHC.Generics                                       (Generic)
-import           IO.ChainIndex                                      (getUtxosAt)
-import           Ledger                                             (Address, CardanoTx (..), DecoratedTxOut(..), TxOutRef, PubKeyHash,
-                                                                        StakingCredential, Ada, Value, txOutValue, txOutAddress, getCardanoTxOutputs,
-                                                                        _decoratedTxOutAddress, toPlutusAddress, PaymentPubKeyHash (PaymentPubKeyHash))
+import           Ledger                                             (Ada, Address, CardanoTx (..), DecoratedTxOut (..),
+                                                                     PaymentPubKeyHash (PaymentPubKeyHash), PubKeyHash,
+                                                                     StakingCredential, TxOutRef, Value, _decoratedTxOutAddress,
+                                                                     getCardanoTxOutputs, toPlutusAddress, txOutAddress,
+                                                                     txOutValue)
 import qualified Ledger.Ada                                         as Ada
-import           Ledger.Constraints                                 (TxConstraints, ScriptLookups, mustPayToPubKeyAddress, mustPayToPubKey, mkTxWithParams)
-import           Ledger.Typed.Scripts                               (ValidatorTypes(..))
+import           Ledger.Constraints                                 (ScriptLookups, TxConstraints, mkTxWithParams,
+                                                                     mustPayToPubKey, mustPayToPubKeyAddress)
 import           Ledger.Tx                                          (getCardanoTxId)
 import           Ledger.Tx.CardanoAPI                               (unspentOutputsTx)
+import           Ledger.Typed.Scripts                               (ValidatorTypes (..))
 import           Ledger.Value                                       (leq)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
-import           PlutusTx.IsData                                    (ToData, FromData)
-import           PlutusTx.Prelude                                   ((-), zero)
+import           PlutusAppsExtra.IO.ChainIndex                      (getUtxosAt)
+import           PlutusTx.IsData                                    (FromData, ToData)
+import           PlutusTx.Prelude                                   (zero, (-))
 import           Prelude                                            hiding ((-))
 
-import           Types.Error                                        (ConnectionError, throwEither, throwMaybe, MkTxError (..), WalletError (..))
-import           Utils.Address                                      (bech32ToAddress, addressToKeyHashes)
-import           Utils.ChainIndex                                   (MapUTXO)
-import           Utils.Servant                                      (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
-import           Utils.Tx                                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
+import           PlutusAppsExtra.Types.Error                        (ConnectionError, MkTxError (..), WalletError (..),
+                                                                     throwEither, throwMaybe)
+import           PlutusAppsExtra.Utils.Address                      (addressToKeyHashes, bech32ToAddress)
+import           PlutusAppsExtra.Utils.ChainIndex                   (MapUTXO)
+import           PlutusAppsExtra.Utils.Servant                      (Endpoint, getFromEndpointOnPort,
+                                                                     pattern ConnectionErrorOnPort)
+import           PlutusAppsExtra.Utils.Tx                           (apiSerializedTxToCardanoTx, cardanoTxToSealedTx)
 
 ------------------------------------------- Restore-wallet -------------------------------------------
 

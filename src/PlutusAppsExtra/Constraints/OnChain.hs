@@ -1,19 +1,19 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 
-module Constraints.OnChain where
+module PlutusAppsExtra.Constraints.OnChain where
 
-import           Ledger                           (contains, interval)
+import           Ledger                    (contains, interval)
 import           Plutus.V2.Ledger.Api
-import           Plutus.V2.Ledger.Contexts        (findDatum, findOwnInput, ownCurrencySymbol)
-import           PlutusTx.AssocMap                (lookup)
-import           PlutusTx.Prelude                 hiding (Semigroup(..), (<$>), unless, toList, fromInteger, mempty)
+import           Plutus.V2.Ledger.Contexts (findDatum, findOwnInput, ownCurrencySymbol)
+import           PlutusTx.AssocMap         (lookup)
+import           PlutusTx.Prelude          hiding (Semigroup (..), fromInteger, mempty, toList, unless, (<$>))
 
 
 {-# INLINABLE checkDatum #-}

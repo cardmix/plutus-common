@@ -1,28 +1,28 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 
-module Types.Tx where
+module PlutusAppsExtra.Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
 import           Control.Monad.State              (State, execState)
 import           GHC.Generics                     (Generic)
-import           Ledger.Constraints.TxConstraints (TxConstraints)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
-import           Ledger.Typed.Scripts             (ValidatorTypes (..), Any)
+import           Ledger.Constraints.TxConstraints (TxConstraints)
+import           Ledger.Typed.Scripts             (Any, ValidatorTypes (..))
 import           Plutus.V2.Ledger.Api             (POSIXTime)
-import           PlutusTx.Prelude                 hiding (Semigroup, (<$>), mempty, unless, mapMaybe, toList, fromInteger)
-import           Prelude                          (Show, Monoid (mempty))
+import           PlutusTx.Prelude                 hiding (Semigroup, fromInteger, mapMaybe, mempty, toList, unless, (<$>))
+import           Prelude                          (Monoid (mempty), Show)
 
-import           Types.Error                      (TxBuilderError)
-import           Utils.ChainIndex                 (MapUTXO)
+import           PlutusAppsExtra.Types.Error      (TxBuilderError)
+import           PlutusAppsExtra.Utils.ChainIndex (MapUTXO)
 
 data TxConstructor a i o = TxConstructor
     {

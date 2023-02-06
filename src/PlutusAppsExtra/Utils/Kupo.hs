@@ -8,29 +8,29 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeApplications           #-}
 
-module Utils.Kupo where
+module PlutusAppsExtra.Utils.Kupo where
 
-import           Codec.Serialise      (deserialise)
-import           Control.Monad        (mzero )
-import           Data.Aeson           (FromJSON(..), (.:), withObject)
-import qualified Data.Aeson           as J
-import qualified Data.Aeson.Key       as J
-import qualified Data.Aeson.KeyMap    as J
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Coerce          (coerce)
-import           Data.Functor         ((<&>))
-import qualified Data.Text            as T
-import           Ledger               (Address(..), Language(..), Script,
-                                       TxId(..), TxOutRef(..), Value, Versioned(..), ScriptHash(..), DatumHash(..),
-                                       DatumFromQuery(..), Datum (..), ValidatorHash (..), Validator(..), PubKeyHash)
-import qualified Ledger.Ada           as Ada
-import qualified Ledger.Value         as Value
-import           Plutus.V1.Ledger.Api (StakingCredential(..), Credential(..), fromBuiltin, toBuiltin)
-import qualified PlutusTx.AssocMap    as PMap
-import           PlutusTx.Builtins    (BuiltinByteString)
-import           Servant.API          (ToHttpApiData(..))
-import           Text.Hex             (decodeHex, encodeHex)
-import           Utils.Address        (bech32ToAddress)
+import           Codec.Serialise               (deserialise)
+import           Control.Monad                 (mzero)
+import           Data.Aeson                    (FromJSON (..), withObject, (.:))
+import qualified Data.Aeson                    as J
+import qualified Data.Aeson.Key                as J
+import qualified Data.Aeson.KeyMap             as J
+import qualified Data.ByteString.Lazy          as LBS
+import           Data.Coerce                   (coerce)
+import           Data.Functor                  ((<&>))
+import qualified Data.Text                     as T
+import           Ledger                        (Address (..), Datum (..), DatumFromQuery (..), DatumHash (..), Language (..),
+                                                PubKeyHash, Script, ScriptHash (..), TxId (..), TxOutRef (..), Validator (..),
+                                                ValidatorHash (..), Value, Versioned (..))
+import qualified Ledger.Ada                    as Ada
+import qualified Ledger.Value                  as Value
+import           Plutus.V1.Ledger.Api          (Credential (..), StakingCredential (..), fromBuiltin, toBuiltin)
+import           PlutusAppsExtra.Utils.Address (bech32ToAddress)
+import qualified PlutusTx.AssocMap             as PMap
+import           PlutusTx.Builtins             (BuiltinByteString)
+import           Servant.API                   (ToHttpApiData (..))
+import           Text.Hex                      (decodeHex, encodeHex)
 
 ------------------------------------------- Newtype to avoid orphans -------------------------------------------
 
@@ -128,16 +128,6 @@ instance FromJSON (Kupo Value) where
                         pure [(cs', PMap.singleton  name' amount')]
                     _ -> mzero
             toBbs = maybe (fail "not a hex") (pure . toBuiltin) . decodeHex . T.pack
-
-
--- Kupo responds with array to every request
-newtype SingleFromArray a = SingleFromArray a
-    deriving newtype Show
-
-instance FromJSON a => FromJSON (SingleFromArray a) where
-    parseJSON = \case
-        (J.Array [o]) -> SingleFromArray <$> parseJSON o
-        _             -> fail "not a single element array"
 
 -------------------------------------------- ToHttpApiData instances --------------------------------------------
 

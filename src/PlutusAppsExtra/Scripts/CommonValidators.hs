@@ -16,13 +16,13 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Scripts.CommonValidators where
+module PlutusAppsExtra.Scripts.CommonValidators where
 
-import           Ledger.Typed.Scripts                 (IsScriptContext(..), Versioned (..), Language (..))
-import           Plutus.Script.Utils.V2.Address       (mkValidatorAddress)
-import           Plutus.Script.Utils.V2.Scripts       (validatorHash)
+import           Ledger.Typed.Scripts           (IsScriptContext (..), Language (..), Versioned (..))
+import           Plutus.Script.Utils.V2.Address (mkValidatorAddress)
+import           Plutus.Script.Utils.V2.Scripts (validatorHash)
 import           Plutus.V2.Ledger.Api
-import           PlutusTx                             (compile, applyCode, liftCode)
+import           PlutusTx                       (applyCode, compile, liftCode)
 import           PlutusTx.Prelude
 
 {-# INLINABLE alwaysFalseValidatorCheck #-}
