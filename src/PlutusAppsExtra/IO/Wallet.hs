@@ -13,6 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 module PlutusAppsExtra.IO.Wallet where
 
