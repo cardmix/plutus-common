@@ -16,7 +16,7 @@ import           Data.String                   (fromString)
 import           Data.Text                     (Text)
 import           Ledger                        (Address, MintingPolicyHash (..), PubKeyHash (..),
                                                 StakePubKeyHash (StakePubKeyHash), stakePubKeyHashCredential, stakingCredential)
-import           Plutus.V1.Ledger.Api          (fromBuiltin, toBuiltin)
+import           Plutus.V1.Ledger.Api          (CurrencySymbol (..), fromBuiltin, toBuiltin)
 import           PlutusAppsExtra.IO.Blockfrost (getAddressFromStakePubKeyHash, verifyAsset)
 import           PlutusAppsExtra.Utils.Address (bech32ToAddress, bech32ToStakeAddress)
 import qualified Text.Hex                      as T
@@ -58,6 +58,7 @@ stakeCredToSpkh (Cred.KeyHashObj hash) = StakePubKeyHash $ transKeyHash hash
 
 verifyAssetTest :: IO (Maybe TxId)
 verifyAssetTest = verifyAsset 
-    (MintingPolicyHash $ toBuiltin $ fromJust$ T.decodeHex "4cd1187e477d56e419c354f1e4c7997a736dfc5e095a2511aba0f75d")
+    (CurrencySymbol $ toBuiltin $ fromJust $ T.decodeHex "4cd1187e477d56e419c354f1e4c7997a736dfc5e095a2511aba0f75d")
+    ""
     1 
     (toAddr "addr_test1qznvz33axk8zxup2e2wgt7zr0398r3x8uup5xf8ljddreqpu9sytuyrjjxlg6udmkvk6z8emjasmpxgl9fhkjs857wgqrfjuwn")

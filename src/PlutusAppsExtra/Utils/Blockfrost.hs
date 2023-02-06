@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -13,11 +14,12 @@ import           Control.Monad                 (mzero)
 import           Data.Aeson                    (FromJSON (..), withObject, withText, (.:))
 import qualified Data.Aeson                    as J
 import           Data.Functor                  ((<&>))
-import qualified Data.Map                      as Map
 import qualified Data.Text                     as T
-import           Ledger                        (Address, MintingPolicyHash (..))
+import           Ledger                        (Address, AssetClass, Value)
+import           Ledger.Value                  (AssetClass (..), TokenName (..), Value (..), adaToken)
 import           Plutus.V1.Ledger.Api          (CurrencySymbol (..), adaSymbol, fromBuiltin, toBuiltin)
 import           PlutusAppsExtra.Utils.Address (bech32ToAddress)
+import qualified PlutusTx.AssocMap             as PAM
 import           Servant.API                   (ToHttpApiData (..))
 import qualified Text.Hex                      as T
 import           Text.Read                     (readMaybe)
@@ -33,7 +35,7 @@ instance FromJSON AccDelegationHistoryResponse where
     parseJSON = withObject "Tx delegation certificate response" $ \o -> do
         adhrActiveEpoch <- o .: "active_epoch"
         adhrTxHash      <- o .: "tx_hash"
-        adhrAmount      <- o .: "amount" >>= maybe (fail "amount") pure . readMaybe 
+        adhrAmount      <- o .: "amount" >>= maybe (fail "amount") pure . readMaybe
         adhrPoolId      <- o .: "pool_id"
         pure AccDelegationHistoryResponse{..}
 
@@ -64,9 +66,9 @@ instance FromJSON TxUtxoResponse where
     parseJSON = withObject "Tx UTXOs response" $ \o -> do
         turTxHash <- o .: "hash"
         turInputs <- o .: "inputs"
-        turOutputs <- o .: "outputs" 
+        turOutputs <- o .: "outputs"
         pure TxUtxoResponse{..}
- 
+
 data TxUtxoResponseInput = TxUtxoResponseInput
     { turiAddress :: Address
     } deriving (Show, Eq)
@@ -78,7 +80,7 @@ instance FromJSON TxUtxoResponseInput where
 
 data TxUTxoResponseOutput = TxUTxoResponseOutput
     { turoAddress :: Address
-    , turoAmount  :: Map.Map CurrencySymbol Integer
+    , turoAmount  :: Value
     } deriving (Show, Eq)
 
 instance FromJSON TxUTxoResponseOutput where
@@ -111,19 +113,24 @@ instance FromJSON AssetHistoryResponse where
         pure AssetHistoryResponse{..}
 
 newtype Bf a = Bf {unBf :: a}
+    deriving Functor
 
 deriving newtype instance Show a => Show (Bf a)
 
 data BfOrder = Asc | Desc
 
-instance FromJSON (Bf (Map.Map CurrencySymbol Integer)) where
+instance FromJSON (Bf Value) where
     parseJSON = withObject "Bf Value" $ \o -> (,) <$> o .: "unit" <*> o .: "quantity" >>= \case
-        (J.String "lovelace", amt) -> toMap amt adaSymbol
-        (J.String policy    , amt) -> toCs policy >>= toMap amt
+        (J.String "lovelace", amt) -> readAmt amt <&> (Bf . Value . PAM.singleton adaSymbol . PAM.singleton adaToken)
+        (J.String txt       , amt) -> do
+            let (cs, name) = T.splitAt 56 txt 
+            amt' <- readAmt amt
+            cs' <- maybe (fail "Currency symbol from hex") (pure . CurrencySymbol . toBuiltin) $ T.decodeHex cs
+            name' <-  maybe (fail "Name from hex") (pure . TokenName . toBuiltin) $ T.decodeHex name
+            pure $ Bf $ Value $ PAM.singleton cs' $ PAM.singleton name' amt'
         _                          -> mzero
         where
-            toMap amt cs = maybe (fail "Read amount from string") pure (readMaybe $ T.unpack amt) <&> Bf . Map.singleton cs
-            toCs = maybe (fail "Currency symbol from hex") (pure . CurrencySymbol . toBuiltin) . T.decodeHex
+            readAmt =  maybe (fail "Read amount from string") pure . readMaybe . T.unpack
 
 instance ToHttpApiData BfOrder where
     toUrlPiece = \case
@@ -136,5 +143,5 @@ instance ToHttpApiData (Bf StakeAddress) where
 instance ToHttpApiData (Bf TxId) where
     toUrlPiece = T.dropAround (== '\"') . T.pack . show
 
-instance ToHttpApiData (Bf MintingPolicyHash) where
-    toUrlPiece (Bf (MintingPolicyHash bbs)) = T.encodeHex $ fromBuiltin bbs
+instance ToHttpApiData (Bf AssetClass) where
+    toUrlPiece (Bf (AssetClass (CurrencySymbol cs, TokenName token))) = T.encodeHex $ fromBuiltin $ cs <> token

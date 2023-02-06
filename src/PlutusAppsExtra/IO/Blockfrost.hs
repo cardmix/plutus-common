@@ -16,10 +16,9 @@ import           Control.Monad.Trans.Maybe        (MaybeT (..))
 import           Data.Data                        (Proxy (..))
 import           Data.Foldable                    (find)
 import           Data.Functor                     ((<&>))
-import qualified Data.Map                         as Map
 import           Data.Maybe                       (listToMaybe)
-import           Ledger                           (Address, MintingPolicyHash (..), StakePubKeyHash (..))
-import           Ledger.Value                     (CurrencySymbol (CurrencySymbol))
+import           Ledger                           (Address, AssetClass, CurrencySymbol, StakePubKeyHash (..), TokenName)
+import           Ledger.Value                     (AssetClass (..), valueOf)
 import           Network.HTTP.Client              (HttpException (..), newManager)
 import           Network.HTTP.Client.TLS          (tlsManagerSettings)
 import           PlutusAppsExtra.Types.Error      (ConnectionError (..))
@@ -32,7 +31,7 @@ import           Servant.Client                   (BaseUrl (..), ClientM, Scheme
 import qualified Servant.Client                   as Servant
 
 tokenFilePath :: FilePath
-tokenFilePath = "testnet/preview/blockfrost.token"
+tokenFilePath = "blockfrost.token"
 
 portBf :: Int
 portBf = 80
@@ -52,13 +51,12 @@ getAddressFromStakeAddress stakeAddr = do
     maybe (pure Nothing) (fmap (fmap turiAddress . listToMaybe . turInputs) . getTxUtxo) txId
 
 -- find tx id where address have minted specific amount of asset
-verifyAsset :: MintingPolicyHash -> Integer -> Address -> IO (Maybe TxId)
-verifyAsset mp@(MintingPolicyHash h) amount addr = do
-    history <- filter (\AssetHistoryResponse{..} -> ahrMintingPolarity == BfMint && ahrAmount == amount) <$> getAssetHistory mp
-    foldM (\res (ahrTxHash -> txId) -> pure res <|> (getTxUtxo txId <&> findOutput txId . turOutputs)) Nothing history
+verifyAsset :: CurrencySymbol -> TokenName -> Integer -> Address -> IO (Maybe TxId)
+verifyAsset cs token amount addr = do
+    history <- filter (\AssetHistoryResponse{..} -> ahrMintingPolarity == BfMint && ahrAmount == amount) <$> getAssetHistory cs token
+    foldM (\res (ahrTxHash -> txId) -> (res <|>) <$> (getTxUtxo txId <&> findOutput txId . turOutputs)) Nothing history
     where
-        findOutput txId outs = const (Just txId) =<< find (\o -> turoAddress o == addr &&  Map.lookup cs (turoAmount o) == Just amount) outs
-        cs = CurrencySymbol h
+        findOutput txId outs = const (Just txId) =<< find (\o -> turoAddress o == addr && valueOf (turoAmount o) cs token == amount) outs
 
 --------------------------------------------------- Blockfrost API ---------------------------------------------------
 
@@ -68,8 +66,8 @@ getTxUtxo txId = getFromEndpointBF $ withBfToken $ \t -> getBfTxUtxo t $ Bf txId
 getAccountDelegationHistory :: StakeAddress -> IO [AccDelegationHistoryResponse]
 getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBfAccDelegationHistory t (Bf addr) (Just Desc)
 
-getAssetHistory :: MintingPolicyHash -> IO [AssetHistoryResponse]
-getAssetHistory mph = getFromEndpointBF $ withBfToken $ \t -> getBfAssetHistory t (Bf mph)
+getAssetHistory :: CurrencySymbol -> TokenName -> IO [AssetHistoryResponse]
+getAssetHistory cs name = getFromEndpointBF $ withBfToken $ \t -> getBfAssetHistory t (Bf $ AssetClass (cs, name))
 
 type BfToken = Maybe String
 
@@ -104,12 +102,12 @@ type GetTxDelegationCerts
 type GetTxUtxo
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "utxos" :> Get '[JSON] TxUtxoResponse
 type GetAssetHistory
-    = Auth :> "assets" :> Capture "Policy id" (Bf MintingPolicyHash) :> "history" :> Get '[JSON] [AssetHistoryResponse]
+    = Auth :> "assets" :> Capture "Policy id" (Bf AssetClass) :> "history" :> Get '[JSON] [AssetHistoryResponse]
 
-getBfAccDelegationHistory :: BfToken -> Bf StakeAddress      -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
-getBfTxDelegationCerts    :: BfToken -> Bf TxId                               -> ClientM TxDelegationsCertsResponse
-getBfTxUtxo               :: BfToken -> Bf TxId                               -> ClientM TxUtxoResponse
-getBfAssetHistory         :: BfToken -> Bf MintingPolicyHash                  -> ClientM [AssetHistoryResponse]
+getBfAccDelegationHistory :: BfToken -> Bf StakeAddress -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
+getBfTxDelegationCerts    :: BfToken -> Bf TxId                          -> ClientM TxDelegationsCertsResponse
+getBfTxUtxo               :: BfToken -> Bf TxId                          -> ClientM TxUtxoResponse
+getBfAssetHistory         :: BfToken -> Bf AssetClass                    -> ClientM [AssetHistoryResponse]
 
 (getBfAccDelegationHistory, getBfTxDelegationCerts, getBfTxUtxo, getBfAssetHistory)
     = (getBfAccDelegationHistory_, getBfTxDelegationCerts_, getBfTxUtxo_, getBfAssetHistory_)
