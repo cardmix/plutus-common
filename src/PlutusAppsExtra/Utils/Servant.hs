@@ -1,20 +1,20 @@
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
-{-# LANGUAGE LambdaCase #-}
 
-module Utils.Servant where
+module PlutusAppsExtra.Utils.Servant where
 
-import           Control.Arrow             ((&&&))
-import           Control.Monad.Catch       (Exception (..), MonadCatch, handle, throwM)
-import           Control.Monad.IO.Class    (MonadIO (..))
-import           Network.HTTP.Client       (HttpException (..), HttpExceptionContent (..), Request (port), defaultManagerSettings,
-                                            newManager)
-import           Network.HTTP.Types.Status (Status (statusCode))
-import           Servant.Client            (BaseUrl (..), ClientM, Scheme (..), mkClientEnv, runClientM)
-import qualified Servant.Client            as Servant
-import           Types.Error               (ConnectionError (..))
+import           Control.Arrow               ((&&&))
+import           Control.Monad.Catch         (Exception (..), MonadCatch, handle, throwM)
+import           Control.Monad.IO.Class      (MonadIO (..))
+import           Network.HTTP.Client         (HttpException (..), HttpExceptionContent (..), Request (port),
+                                              defaultManagerSettings, newManager)
+import           Network.HTTP.Types.Status   (Status (statusCode))
+import           PlutusAppsExtra.Types.Error (ConnectionError (..))
+import           Servant.Client              (BaseUrl (..), ClientM, Scheme (..), mkClientEnv, runClientM)
+import qualified Servant.Client              as Servant
 
 type Endpoint a = forall m. MonadIO m => ClientM a -> m a
 

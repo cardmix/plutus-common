@@ -6,21 +6,21 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 
-module Utils.Blockfrost where
-import           Cardano.Api          (SerialiseAddress (serialiseAddress), StakeAddress, TxId (..))
-import           Cardano.Api.Shelley  (PoolId)
-import           Control.Monad        (mzero)
-import           Data.Aeson           (FromJSON (..), withObject, withText, (.:))
-import qualified Data.Aeson           as J
-import           Data.Functor         ((<&>))
-import qualified Data.Map             as Map
-import qualified Data.Text            as T
-import           Ledger               (Address, MintingPolicyHash (..))
-import           Plutus.V1.Ledger.Api (CurrencySymbol (..), adaSymbol, fromBuiltin, toBuiltin)
-import           Servant.API          (ToHttpApiData (..))
-import qualified Text.Hex             as T
-import           Text.Read            (readMaybe)
-import           Utils.Address        (bech32ToAddress)
+module PlutusAppsExtra.Utils.Blockfrost where
+import           Cardano.Api                   (SerialiseAddress (serialiseAddress), StakeAddress, TxId (..))
+import           Cardano.Api.Shelley           (PoolId)
+import           Control.Monad                 (mzero)
+import           Data.Aeson                    (FromJSON (..), withObject, withText, (.:))
+import qualified Data.Aeson                    as J
+import           Data.Functor                  ((<&>))
+import qualified Data.Map                      as Map
+import qualified Data.Text                     as T
+import           Ledger                        (Address, MintingPolicyHash (..))
+import           Plutus.V1.Ledger.Api          (CurrencySymbol (..), adaSymbol, fromBuiltin, toBuiltin)
+import           PlutusAppsExtra.Utils.Address (bech32ToAddress)
+import           Servant.API                   (ToHttpApiData (..))
+import qualified Text.Hex                      as T
+import           Text.Read                     (readMaybe)
 
 data AccDelegationHistoryResponse = AccDelegationHistoryResponse
     { adhrActiveEpoch :: Int

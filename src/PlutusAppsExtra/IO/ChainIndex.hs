@@ -7,30 +7,30 @@
 {-# LANGUAGE TupleSections        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module IO.ChainIndex where
+module PlutusAppsExtra.IO.ChainIndex where
 
-import           Cardano.Api              (FromJSON, ToJSON)
-import           Control.Applicative      (Applicative (..))
-import           Control.Monad.Extra      (mconcatMapM)
-import           Control.Monad.IO.Class   (MonadIO (..))
-import           Data.Default             (Default (def))
-import           Data.Map                 (Map)
-import qualified Data.Map                 as Map
-import           GHC.Generics             (Generic)
-import           IO.Time                  (currentTime)
-import           Ledger                   (Address, DecoratedTxOut (..), POSIXTime, TxOutRef (..))
-import           Network.HTTP.Client      (HttpExceptionContent, Request)
-import           Plutus.ChainIndex        (ChainIndexTx, Page (..), PageQuery)
-import           Plutus.ChainIndex.Api    (UtxoAtAddressRequest (..), UtxosResponse (..))
-import qualified Plutus.ChainIndex.Client as Client
-import           Plutus.V1.Ledger.Address (Address (addressCredential))
-import           PlutusTx.Prelude         hiding (fmap, mapM, mconcat, pure, traverse, (<$>), (<>))
-import           Prelude                  (IO, Show (..), fmap, traverse, (<$>), (<>))
+import           Cardano.Api                      (FromJSON, ToJSON)
+import           Control.Applicative              (Applicative (..))
+import           Control.Monad.Extra              (mconcatMapM)
+import           Control.Monad.IO.Class           (MonadIO (..))
+import           Data.Default                     (Default (def))
+import           Data.Map                         (Map)
+import qualified Data.Map                         as Map
+import           GHC.Generics                     (Generic)
+import           Ledger                           (Address, DecoratedTxOut (..), POSIXTime, TxOutRef (..))
+import           Network.HTTP.Client              (HttpExceptionContent, Request)
+import           Plutus.ChainIndex                (ChainIndexTx, Page (..), PageQuery)
+import           Plutus.ChainIndex.Api            (UtxoAtAddressRequest (..), UtxosResponse (..))
+import qualified Plutus.ChainIndex.Client         as Client
+import           Plutus.V1.Ledger.Address         (Address (addressCredential))
+import           PlutusAppsExtra.IO.Time          (currentTime)
+import           PlutusTx.Prelude                 hiding (fmap, mapM, mconcat, pure, traverse, (<$>), (<>))
+import           Prelude                          (IO, Show (..), fmap, traverse, (<$>), (<>))
 
-import           Data.Maybe               (catMaybes)
-import           Types.Error              (ConnectionError)
-import           Utils.ChainIndex         (MapUTXO)
-import           Utils.Servant            (Endpoint, getFromEndpointOnPort, handle404, pattern ConnectionErrorOnPort)
+import           Data.Maybe                       (catMaybes)
+import           PlutusAppsExtra.Types.Error      (ConnectionError)
+import           PlutusAppsExtra.Utils.ChainIndex (MapUTXO)
+import           PlutusAppsExtra.Utils.Servant    (Endpoint, getFromEndpointOnPort, handle404, pattern ConnectionErrorOnPort)
 
 ----------------------------------- Chain index cache -----------------------------------
 

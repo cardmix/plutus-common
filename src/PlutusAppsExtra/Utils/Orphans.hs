@@ -1,27 +1,27 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wno-orphans               #-}
 
-module Utils.Orphans where
+module PlutusAppsExtra.Utils.Orphans where
 
-import           Ledger                            (PubKeyHash(..), StakePubKeyHash, ValidatorHash (..))
-import           Ledger.Address                    (PaymentPubKeyHash (..), StakePubKeyHash (..), Address (..))
-import           Plutus.V2.Ledger.Api              (Credential(..), StakingCredential (..))
-import           Ledger.Tx                         (TxOutRef (..), TxId (..))
-import           PlutusTx.Prelude                  hiding ((<$>), (<>))
-import           Prelude                           ((<$>), (^))
-import           Test.QuickCheck                   (Arbitrary (..))
+import           Ledger                    (PubKeyHash (..), StakePubKeyHash, ValidatorHash (..))
+import           Ledger.Address            (Address (..), PaymentPubKeyHash (..), StakePubKeyHash (..))
+import           Ledger.Tx                 (TxId (..), TxOutRef (..))
+import           Plutus.V2.Ledger.Api      (Credential (..), StakingCredential (..))
+import           PlutusTx.Prelude          hiding ((<$>), (<>))
+import           Prelude                   ((<$>), (^))
+import           Test.QuickCheck           (Arbitrary (..))
 
-import           PlutusTx.Extra.ByteString         (ToBuiltinByteString(..))
+import           PlutusTx.Extra.ByteString (ToBuiltinByteString (..))
 
 ------------------------------------- Arbitrary --------------------------------------
 

@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 
-module Utils.Address where
+module PlutusAppsExtra.Utils.Address where
 
 import           Cardano.Api.Shelley          (AsType (..), NetworkId, SerialiseAddress (..), ShelleyEra, StakeAddress (..),
                                                StakeCredential (..), byronAddressInEra, shelleyAddressInEra)

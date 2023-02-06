@@ -2,26 +2,27 @@
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE PatternSynonyms  #-}
 {-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
-{-# LANGUAGE TupleSections    #-}
 
-module IO.Kupo where
+module PlutusAppsExtra.IO.Kupo where
 
-import           Control.Monad        ((<=<) )
-import           Data.Coerce          (coerce)
-import           Data.Data            (Proxy (..))
-import qualified Data.Map             as Map
-import           Ledger               (Address(..), DecoratedTxOut(..), Script, TxOutRef(..), Versioned(..), ScriptHash(..),
-                                       DatumHash(..), Datum (..), ValidatorHash (..), Validator(..))
-import           Network.HTTP.Client  (Request, HttpExceptionContent)
-import           Servant.API          (Get,JSON,(:>),Capture,(:<|>)((:<|>)),QueryFlag)
-import           Servant.Client       (client, ClientM)
-import           Types.Error          (ConnectionError)
-import           Utils.ChainIndex     (MapUTXO)
-import           Utils.Kupo           (KupoUTXOs, Kupo(..), KupoDecoratedTxOut(..))
-import           Utils.Servant        (Endpoint, pattern ConnectionErrorOnPort, getFromEndpointOnPort)
-import Data.Maybe (listToMaybe)
+import           Control.Monad                    ((<=<))
+import           Data.Coerce                      (coerce)
+import           Data.Data                        (Proxy (..))
+import qualified Data.Map                         as Map
+import           Data.Maybe                       (listToMaybe)
+import           Ledger                           (Address (..), Datum (..), DatumHash (..), DecoratedTxOut (..), Script,
+                                                   ScriptHash (..), TxOutRef (..), Validator (..), ValidatorHash (..),
+                                                   Versioned (..))
+import           Network.HTTP.Client              (HttpExceptionContent, Request)
+import           PlutusAppsExtra.Types.Error      (ConnectionError)
+import           PlutusAppsExtra.Utils.ChainIndex (MapUTXO)
+import           PlutusAppsExtra.Utils.Kupo       (Kupo (..), KupoDecoratedTxOut (..), KupoUTXOs)
+import           PlutusAppsExtra.Utils.Servant    (Endpoint, getFromEndpointOnPort, pattern ConnectionErrorOnPort)
+import           Servant.API                      (Capture, Get, JSON, QueryFlag, (:<|>) ((:<|>)), (:>))
+import           Servant.Client                   (ClientM, client)
 
 -- Get all utxos at a given address
 getUtxosAt :: Address -> IO MapUTXO

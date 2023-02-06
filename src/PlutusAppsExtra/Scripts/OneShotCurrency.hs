@@ -15,7 +15,6 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -23,33 +22,33 @@
 
 -- | Implements a custom currency with a minting policy that allows
 --   the minting of a fixed amount of units.
-module Scripts.OneShotCurrency (
-    -- Types
-    OneShotCurrencyParams(..),
-    -- On-Chain
-    oneShotCurrencyPolicy,
-    -- Off-Chain
-    mkCurrency,
-    currencySymbol,
-    currencyValue,    
-    oneShotCurrencyMintTx
+module PlutusAppsExtra.Scripts.OneShotCurrency
+    ( -- Types
+      OneShotCurrencyParams (..)
+      -- On-Chain
+    , oneShotCurrencyPolicy
+      -- Off-Chain
+    , mkCurrency
+    , currencySymbol
+    , currencyValue
+    , oneShotCurrencyMintTx
     ) where
 
-import           Data.Aeson                             (FromJSON, ToJSON)
-import           GHC.Generics                           (Generic)
-import           Ledger                                 (DecoratedTxOut, Versioned (..), Language (..))
-import           Ledger.Typed.Scripts                   (mkUntypedMintingPolicy)
-import           Plutus.Script.Utils.V2.Scripts         (MintingPolicy, scriptCurrencySymbol)
-import           Plutus.V2.Ledger.Api                   (CurrencySymbol, TokenName, Value, TxOutRef (..),
-                                                            ScriptContext (..), TxInfo (..), mkMintingPolicyScript, singleton)
-import           Plutus.V2.Ledger.Contexts              (ownCurrencySymbol, spendsOutput)
+import           Data.Aeson                           (FromJSON, ToJSON)
+import           GHC.Generics                         (Generic)
+import           Ledger                               (DecoratedTxOut, Language (..), Versioned (..))
+import           Ledger.Typed.Scripts                 (mkUntypedMintingPolicy)
+import           Plutus.Script.Utils.V2.Scripts       (MintingPolicy, scriptCurrencySymbol)
+import           Plutus.V2.Ledger.Api                 (CurrencySymbol, ScriptContext (..), TokenName, TxInfo (..), TxOutRef (..),
+                                                       Value, mkMintingPolicyScript, singleton)
+import           Plutus.V2.Ledger.Contexts            (ownCurrencySymbol, spendsOutput)
 import qualified PlutusTx
-import qualified PlutusTx.AssocMap                      as AssocMap
-import           PlutusTx.Prelude                       hiding (Monoid (..), Semigroup (..))
-import qualified Prelude                                as Haskell
+import qualified PlutusTx.AssocMap                    as AssocMap
+import           PlutusTx.Prelude                     hiding (Monoid (..), Semigroup (..))
+import qualified Prelude                              as Haskell
 
-import           Constraints.OffChain                   (tokensMintedTx, utxoSpentPublicKeyTx)
-import           Types.Tx                               (TransactionBuilder)
+import           PlutusAppsExtra.Constraints.OffChain (tokensMintedTx, utxoSpentPublicKeyTx)
+import           PlutusAppsExtra.Types.Tx             (TransactionBuilder)
 
 ---------------------------------- Types ------------------------------------
 

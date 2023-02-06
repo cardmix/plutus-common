@@ -1,13 +1,15 @@
-module IO.Node where
+module PlutusAppsExtra.IO.Node where
 
-import           Cardano.Api.Shelley                                 (LocalNodeClientProtocols (..), LocalChainSyncClient (NoLocalChainSyncClient),
-                                                                      TxValidationErrorInMode, connectToLocalNode, LocalNodeConnectInfo (..),
-                                                                      EpochSlots(..), NetworkId, TxInMode (..), ConsensusModeParams (..), CardanoMode)
+import           Cardano.Api.Shelley                                 (CardanoMode, ConsensusModeParams (..), EpochSlots (..),
+                                                                      LocalChainSyncClient (NoLocalChainSyncClient),
+                                                                      LocalNodeClientProtocols (..), LocalNodeConnectInfo (..),
+                                                                      NetworkId, TxInMode (..), TxValidationErrorInMode,
+                                                                      connectToLocalNode)
 import           Control.Concurrent.STM                              (atomically, newEmptyTMVarIO, putTMVar, takeTMVar)
 import           Control.Monad.Catch                                 (throwM)
 import           Ledger.Tx                                           (CardanoTx (..), SomeCardanoApiTx (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
-import           Types.Error                                         (SubmitTxToLocalNodeError (..))
+import           PlutusAppsExtra.Types.Error                         (SubmitTxToLocalNodeError (..))
 
 sumbitTxToNodeLocal
     :: FilePath

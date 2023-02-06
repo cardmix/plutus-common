@@ -30,27 +30,27 @@ common lang
 library
     import: lang
     exposed-modules:
-      Constraints.Balance
-      Constraints.OffChain
-      Constraints.OnChain
-      IO.ChainIndex
-      IO.Blockfrost
-      IO.Kupo
-      IO.Node
-      IO.Time
-      IO.Wallet
-      Scripts.CommonValidators
-      Scripts.OneShotCurrency
-      Types.Error
-      Types.Tx
-      Utils.Address
-      Utils.ChainIndex
-      Utils.Blockfrost
-      Utils.Crypto
-      Utils.Kupo
-      Utils.Orphans
-      Utils.Tx
-      Utils.Servant
+      PlutusAppsExtra.Constraints.Balance
+      PlutusAppsExtra.Constraints.OffChain
+      PlutusAppsExtra.Constraints.OnChain
+      PlutusAppsExtra.IO.ChainIndex
+      PlutusAppsExtra.IO.Blockfrost
+      PlutusAppsExtra.IO.Kupo
+      PlutusAppsExtra.IO.Node
+      PlutusAppsExtra.IO.Time
+      PlutusAppsExtra.IO.Wallet
+      PlutusAppsExtra.Scripts.CommonValidators
+      PlutusAppsExtra.Scripts.OneShotCurrency
+      PlutusAppsExtra.Types.Error
+      PlutusAppsExtra.Types.Tx
+      PlutusAppsExtra.Utils.Address
+      PlutusAppsExtra.Utils.ChainIndex
+      PlutusAppsExtra.Utils.Blockfrost
+      PlutusAppsExtra.Utils.Crypto
+      PlutusAppsExtra.Utils.Kupo
+      PlutusAppsExtra.Utils.Orphans
+      PlutusAppsExtra.Utils.Tx
+      PlutusAppsExtra.Utils.Servant
     build-depends:
       base                          >= 4.9 && < 5,
       base16-bytestring                      -any,

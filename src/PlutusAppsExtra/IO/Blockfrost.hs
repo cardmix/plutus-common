@@ -4,32 +4,32 @@
 {-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE ViewPatterns     #-}
 
-module IO.Blockfrost where
+module PlutusAppsExtra.IO.Blockfrost where
 
-import           Cardano.Api               (NetworkId (..), StakeAddress, TxId, makeStakeAddress)
-import           Cardano.Api.Shelley       (PoolId)
-import           Control.Applicative       ((<|>))
-import           Control.Monad             (foldM)
-import           Control.Monad.Catch       (Exception (..), MonadThrow (..))
-import           Control.Monad.IO.Class    (MonadIO (..))
-import           Control.Monad.Trans.Maybe (MaybeT (..))
-import           Data.Data                 (Proxy (..))
-import           Data.Foldable             (find)
-import           Data.Functor              ((<&>))
-import qualified Data.Map                  as Map
-import           Data.Maybe                (listToMaybe)
-import           Ledger                    (Address, MintingPolicyHash (..), StakePubKeyHash (..))
-import           Ledger.Value              (CurrencySymbol (CurrencySymbol))
-import           Network.HTTP.Client       (HttpException (..), newManager)
-import           Network.HTTP.Client.TLS   (tlsManagerSettings)
-import           Servant.API               (Capture, Get, Header, JSON, QueryParam, (:<|>) ((:<|>)), (:>))
-import           Servant.Client            (BaseUrl (..), ClientM, Scheme (..), client, mkClientEnv, runClientM)
-import qualified Servant.Client            as Servant
-import           Types.Error               (ConnectionError (..))
-import           Utils.Address             (spkhToStakeCredential)
-import           Utils.Blockfrost          (AccDelegationHistoryResponse (..), AssetHistoryResponse (..), Bf (..),
-                                            BfMintingPolarity (..), BfOrder (..), TxDelegationsCertsResponse,
-                                            TxUTxoResponseOutput (..), TxUtxoResponse (..), TxUtxoResponseInput (..))
+import           Cardano.Api                      (NetworkId (..), StakeAddress, TxId, makeStakeAddress)
+import           Cardano.Api.Shelley              (PoolId)
+import           Control.Applicative              ((<|>))
+import           Control.Monad                    (foldM)
+import           Control.Monad.Catch              (Exception (..), MonadThrow (..))
+import           Control.Monad.IO.Class           (MonadIO (..))
+import           Control.Monad.Trans.Maybe        (MaybeT (..))
+import           Data.Data                        (Proxy (..))
+import           Data.Foldable                    (find)
+import           Data.Functor                     ((<&>))
+import qualified Data.Map                         as Map
+import           Data.Maybe                       (listToMaybe)
+import           Ledger                           (Address, MintingPolicyHash (..), StakePubKeyHash (..))
+import           Ledger.Value                     (CurrencySymbol (CurrencySymbol))
+import           Network.HTTP.Client              (HttpException (..), newManager)
+import           Network.HTTP.Client.TLS          (tlsManagerSettings)
+import           PlutusAppsExtra.Types.Error      (ConnectionError (..))
+import           PlutusAppsExtra.Utils.Address    (spkhToStakeCredential)
+import           PlutusAppsExtra.Utils.Blockfrost (AccDelegationHistoryResponse (..), AssetHistoryResponse (..), Bf (..),
+                                                   BfMintingPolarity (..), BfOrder (..), TxDelegationsCertsResponse,
+                                                   TxUTxoResponseOutput (..), TxUtxoResponse (..), TxUtxoResponseInput (..))
+import           Servant.API                      (Capture, Get, Header, JSON, QueryParam, (:<|>) ((:<|>)), (:>))
+import           Servant.Client                   (BaseUrl (..), ClientM, Scheme (..), client, mkClientEnv, runClientM)
+import qualified Servant.Client                   as Servant
 
 tokenFilePath :: FilePath
 tokenFilePath = "testnet/preview/blockfrost.token"

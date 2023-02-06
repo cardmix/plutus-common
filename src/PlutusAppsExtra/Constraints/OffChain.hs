@@ -1,14 +1,14 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 
-module Constraints.OffChain where
+module PlutusAppsExtra.Constraints.OffChain where
 
 import           Control.Monad                       (liftM2, when)
 import           Control.Monad.State                 (MonadState (..))
@@ -17,17 +17,17 @@ import           Data.List                           (find)
 import qualified Data.Map                            as Map
 import           Data.Maybe                          (isJust, isNothing)
 import           Data.Text                           (Text)
-import           Ledger                              (DecoratedTxOut(..), Versioned, Slot, mintingPolicyHash, validatorHash)
+import           Ledger                              (DecoratedTxOut (..), Slot, Versioned, mintingPolicyHash, validatorHash)
 import           Ledger.Address                      (PaymentPubKeyHash)
-import           Ledger.Constraints.OffChain         (unspentOutputs, otherData, mintingPolicy, otherScript)
+import           Ledger.Constraints.OffChain         (mintingPolicy, otherData, otherScript, unspentOutputs)
 import           Ledger.Constraints.TxConstraints
 import           Ledger.Constraints.ValidityInterval (interval)
 import           Plutus.V2.Ledger.Api                hiding (singleton)
-import           Prelude                             
+import           Prelude
 
-import           Types.Error                         (TxBuilderError(..))
-import           Types.Tx                            (TxConstructor (..), TransactionBuilder)
-import           Utils.ChainIndex                    (filterPubKeyUtxos, filterScriptUtxos)
+import           PlutusAppsExtra.Types.Error         (TxBuilderError (..))
+import           PlutusAppsExtra.Types.Tx            (TransactionBuilder, TxConstructor (..))
+import           PlutusAppsExtra.Utils.ChainIndex    (filterPubKeyUtxos, filterScriptUtxos)
 
 (<&&>) :: (Semigroup a, Monad m) => m a -> m a -> m a
 (<&&>) = liftM2 (<>)
