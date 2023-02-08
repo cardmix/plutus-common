@@ -124,6 +124,25 @@ utxoReferencedTx' f = do
             put constr { txConstructorResult = res <&&> Just (lookups, cons) }
             return $ Just utxo
 
+useAsCollateralTx :: Maybe TxOutRef -> TransactionBuilder (Maybe TxOutRef)
+useAsCollateralTx ref = useAsCollateralTx' ref >>= failTx "useAsCollateralTx" "No matching utxos found"
+
+useAsCollateralTx' :: Maybe TxOutRef -> TransactionBuilder (Maybe TxOutRef)
+useAsCollateralTx' Nothing    = return Nothing
+useAsCollateralTx' (Just ref) = do
+    constr <- get
+    let utxos = txConstructorLookups constr
+        res   = txConstructorResult constr
+    if Map.member ref utxos
+        then do
+            let cons = mustUseOutputAsCollateral ref
+            put constr  { 
+                            txConstructorResult = res <&&> Just (mempty, cons),
+                            txConstructorLookups = Map.delete ref utxos
+                        }
+            return $ Just ref
+        else return Nothing
+
 utxoProducedTx :: ToData datum => Address -> Value -> Maybe datum -> TransactionBuilder ()
 utxoProducedTx addr val dat = do
     constr <- get
