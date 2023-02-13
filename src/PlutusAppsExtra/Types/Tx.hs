@@ -12,7 +12,7 @@
 module PlutusAppsExtra.Types.Tx where
 
 import           Cardano.Api                      (FromJSON, ToJSON)
-import           Control.Monad.State              (State, execState)
+import           Control.Monad.State              (State, execState, gets)
 import           GHC.Generics                     (Generic)
 import           Ledger.Constraints.OffChain      (ScriptLookups)
 import           Ledger.Constraints.TxConstraints (TxConstraints)
@@ -45,3 +45,17 @@ selectTxConstructor = find (isJust . txConstructorResult)
 buildTxConstraints :: TransactionBuilder () -> Transaction ->
     Maybe (ScriptLookups Any, TxConstraints (RedeemerType Any) (DatumType Any))
 buildTxConstraints builder tx = txConstructorResult $ builder `execState` tx
+
+------------------------------------------------ Helper functions ------------------------------------------------
+
+getBuilderTime :: TransactionBuilder POSIXTime
+getBuilderTime = gets txCurrentTime
+
+getBuilderUtxos :: TransactionBuilder MapUTXO
+getBuilderUtxos = gets txConstructorLookups
+
+getBuilderErrors :: TransactionBuilder [TxBuilderError]
+getBuilderErrors = gets txConstructorErrors
+
+getBuilderResult :: TransactionBuilder (Maybe (ScriptLookups Any, TxConstraints (RedeemerType Any) (DatumType Any)))
+getBuilderResult = gets txConstructorResult
