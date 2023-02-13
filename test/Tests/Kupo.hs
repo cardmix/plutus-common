@@ -46,4 +46,4 @@ addrContract :: Text
 addrContract = "addr_test1wpadr7r28cnwfvgmjrn2784j2netmjd0net7t4dkwqt0wzscyypnc"
 
 ref1 :: TxOutRef
-ref1 = TxOutRef (TxId $ toBuiltin $ fromJust $ T.decodeHex "b2f79375bf73234bb988cfdb911c78ac4e9b5470197e828d507babfdcca08d16") 1
+ref1 = TxOutRef (TxId $ toBuiltin $ fromJust $ T.decodeHex "7db1a328bcf2251a59e2f4362057188b11bf4d768a5797fad2a92e65a4370c74") 1

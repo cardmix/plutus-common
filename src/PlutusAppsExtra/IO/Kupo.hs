@@ -8,7 +8,7 @@
 
 module PlutusAppsExtra.IO.Kupo where
 
-import           Control.Monad                    ((<=<))
+import           Control.Monad                    ((<=<), join)
 import           Data.Coerce                      (coerce)
 import           Data.Data                        (Proxy (..))
 import qualified Data.Map                         as Map
@@ -29,13 +29,13 @@ getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = fromKupoUtxos <=< (getFromEndpointKupo . getKupoUtxosAt . Kupo)
 
 unspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
-unspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=< 
+unspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=<
     (getFromEndpointKupo . getKupoUnspentTxOutFromRef . Kupo)
 
-getSciptByHash :: ScriptHash -> IO (Versioned Script)
+getSciptByHash :: ScriptHash -> IO (Maybe (Versioned Script))
 getSciptByHash = fmap coerce . getFromEndpointKupo . getKupoScriptByHash . Kupo
 
-getValidatorByHash :: ValidatorHash -> IO (Versioned Validator)
+getValidatorByHash :: ValidatorHash -> IO (Maybe (Versioned Validator))
 getValidatorByHash = fmap coerce . getFromEndpointKupo . getKupoValidatorByHash . Kupo
 
 getDatumByHash :: DatumHash -> IO Datum
@@ -56,16 +56,16 @@ type GetUtxosAt         =
 type UnspetTxOutFromRef =
     "matches" :> Capture "pattern" (Kupo TxOutRef) :> QueryFlag "unspent" :> Get '[JSON] [KupoDecoratedTxOut]
 type GetScriptByHash    =
-    "scripts" :> Capture "script hash" (Kupo ScriptHash) :> Get '[JSON] (Kupo (Versioned Script))
+    "scripts" :> Capture "script hash" (Kupo ScriptHash) :> Get '[JSON] (Maybe (Kupo (Versioned Script)))
 type GetValidatorByHash =
-    "scripts" :> Capture "validator hash" (Kupo ValidatorHash) :> Get '[JSON] (Kupo (Versioned Validator))
+    "scripts" :> Capture "validator hash" (Kupo ValidatorHash) :> Get '[JSON] (Maybe (Kupo (Versioned Validator)))
 type GetDatumByHash     =
     "datums"  :> Capture "datum hash" (Kupo DatumHash) :> Get '[JSON] (Kupo Datum)
 
 getKupoUtxosAt             :: Kupo Address       -> ClientM KupoUTXOs
 getKupoUnspentTxOutFromRef :: Kupo TxOutRef      -> ClientM [KupoDecoratedTxOut]
-getKupoScriptByHash        :: Kupo ScriptHash    -> ClientM (Kupo (Versioned Script))
-getKupoValidatorByHash     :: Kupo ValidatorHash -> ClientM (Kupo (Versioned Validator))
+getKupoScriptByHash        :: Kupo ScriptHash    -> ClientM (Maybe (Kupo (Versioned Script)))
+getKupoValidatorByHash     :: Kupo ValidatorHash -> ClientM (Maybe (Kupo (Versioned Validator)))
 getKupoDatumByHash         :: Kupo DatumHash     -> ClientM (Kupo Datum)
 (getKupoUtxosAt, getKupoUnspentTxOutFromRef, getKupoScriptByHash, getKupoValidatorByHash, getKupoDatumByHash)
     = ((`getKupoUtxosAt_` True)
@@ -93,8 +93,8 @@ fromKupoDecoratedTxOut = \case
     KupoScriptDecoratedTxOut{..} -> do
         _decoratedTxOutScriptDatum     <- getDatum  _decoratedTxOutScriptDatum
         _decoratedTxOutReferenceScript <- getScript _decoratedTxOutReferenceScriptHash
-        _decoratedTxOutValidator       <- Just <$> getValidatorByHash _decoratedTxOutValidatorHash
+        _decoratedTxOutValidator       <- getValidatorByHash _decoratedTxOutValidatorHash
         pure ScriptDecoratedTxOut{..}
     where
-        getScript = maybe (pure Nothing) (fmap Just . getSciptByHash)
+        getScript = fmap join . mapM getSciptByHash
         getDatum (dh, dtype) = (dh,) . dtype <$> getDatumByHash dh
