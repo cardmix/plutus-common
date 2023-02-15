@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -11,7 +10,6 @@
 module PlutusAppsExtra.Utils.Kupo where
 
 import           Codec.Serialise               (deserialise)
-import           Control.Monad                 (mzero)
 import           Data.Aeson                    (FromJSON (..), withObject, (.:))
 import qualified Data.Aeson                    as J
 import qualified Data.Aeson.Key                as J
