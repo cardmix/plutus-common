@@ -99,18 +99,16 @@ instance FromJSON BfMintingPolarity where
         _        -> mzero
 
 
-data AssetHistoryResponse = AssetHistoryResponse
-    { ahrTxHash          :: TxId
-    , ahrMintingPolarity :: BfMintingPolarity
-    , ahrAmount          :: Integer
+data AssetTxsResponse = AssetTxsResponse
+    { atrTxHash  :: TxId
+    , atrTxIndex :: Integer
     } deriving Show
 
-instance FromJSON AssetHistoryResponse where
+instance FromJSON AssetTxsResponse where
     parseJSON = withObject "Specific asset response" $ \o -> do
-        ahrTxHash          <- o .: "tx_hash"
-        ahrMintingPolarity <- o .: "action"
-        ahrAmount          <- o .: "amount" >>= maybe mzero pure . readMaybe . T.unpack
-        pure AssetHistoryResponse{..}
+        atrTxHash  <- o .: "tx_hash"
+        atrTxIndex <- o .: "tx_index"
+        pure AssetTxsResponse{..}
 
 newtype Bf a = Bf {unBf :: a}
     deriving Functor

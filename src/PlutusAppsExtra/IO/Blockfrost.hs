@@ -23,7 +23,7 @@ import           Network.HTTP.Client              (HttpException (..), newManage
 import           Network.HTTP.Client.TLS          (tlsManagerSettings)
 import           PlutusAppsExtra.Types.Error      (ConnectionError (..))
 import           PlutusAppsExtra.Utils.Address    (spkhToStakeCredential)
-import           PlutusAppsExtra.Utils.Blockfrost (AccDelegationHistoryResponse (..), AssetHistoryResponse (..), Bf (..),
+import           PlutusAppsExtra.Utils.Blockfrost (AccDelegationHistoryResponse (..), AssetTxsResponse (..), Bf (..),
                                                    BfMintingPolarity (..), BfOrder (..), TxDelegationsCertsResponse,
                                                    TxUTxoResponseOutput (..), TxUtxoResponse (..), TxUtxoResponseInput (..))
 import           Servant.API                      (Capture, Get, Header, JSON, QueryParam, (:<|>) ((:<|>)), (:>))
@@ -53,8 +53,8 @@ getAddressFromStakeAddress stakeAddr = do
 -- find tx id where address have minted specific amount of asset
 verifyAsset :: CurrencySymbol -> TokenName -> Integer -> Address -> IO (Maybe TxId)
 verifyAsset cs token amount addr = do
-    history <- filter (\AssetHistoryResponse{..} -> ahrMintingPolarity == BfMint && ahrAmount == amount) <$> getAssetHistory cs token
-    foldM (\res (ahrTxHash -> txId) -> (res <|>) <$> (getTxUtxo txId <&> findOutput txId . turOutputs)) Nothing history
+    history <- getAssetTxs cs token
+    foldM (\res (atrTxHash -> txId) -> (res <|>) <$> (getTxUtxo txId <&> findOutput txId . turOutputs)) Nothing history
     where
         findOutput txId outs = const (Just txId) =<< find (\o -> turoAddress o == addr && valueOf (turoAmount o) cs token == amount) outs
 
@@ -66,8 +66,8 @@ getTxUtxo txId = getFromEndpointBF $ withBfToken $ \t -> getBfTxUtxo t $ Bf txId
 getAccountDelegationHistory :: StakeAddress -> IO [AccDelegationHistoryResponse]
 getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBfAccDelegationHistory t (Bf addr) (Just Desc)
 
-getAssetHistory :: CurrencySymbol -> TokenName -> IO [AssetHistoryResponse]
-getAssetHistory cs name = getFromEndpointBF $ withBfToken $ \t -> getBfAssetHistory t (Bf $ AssetClass (cs, name))
+getAssetTxs :: CurrencySymbol -> TokenName -> IO [AssetTxsResponse]
+getAssetTxs cs name = getFromEndpointBF $ withBfToken $ \t -> getBfAssetTxs t (Bf $ AssetClass (cs, name))
 
 type BfToken = Maybe String
 
@@ -90,7 +90,7 @@ type BlockfrostAPI = "api" :> "v0" :>
     (    GetAccDelegationHistory
     :<|> GetTxDelegationCerts
     :<|> GetTxUtxo
-    :<|> GetAssetHistory
+    :<|> GetAssetTxs
     )
 
 type Auth = Header "project_id" String
@@ -101,19 +101,19 @@ type GetTxDelegationCerts
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "delegations" :> Get '[JSON] TxDelegationsCertsResponse
 type GetTxUtxo
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "utxos" :> Get '[JSON] TxUtxoResponse
-type GetAssetHistory
-    = Auth :> "assets" :> Capture "Policy id" (Bf AssetClass) :> "history" :> Get '[JSON] [AssetHistoryResponse]
+type GetAssetTxs
+    = Auth :> "assets" :> Capture "Policy id" (Bf AssetClass) :> "transactions" :> Get '[JSON] [AssetTxsResponse]
 
 getBfAccDelegationHistory :: BfToken -> Bf StakeAddress -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
 getBfTxDelegationCerts    :: BfToken -> Bf TxId                          -> ClientM TxDelegationsCertsResponse
 getBfTxUtxo               :: BfToken -> Bf TxId                          -> ClientM TxUtxoResponse
-getBfAssetHistory         :: BfToken -> Bf AssetClass                    -> ClientM [AssetHistoryResponse]
+getBfAssetTxs             :: BfToken -> Bf AssetClass                    -> ClientM [AssetTxsResponse]
 
-(getBfAccDelegationHistory, getBfTxDelegationCerts, getBfTxUtxo, getBfAssetHistory)
-    = (getBfAccDelegationHistory_, getBfTxDelegationCerts_, getBfTxUtxo_, getBfAssetHistory_)
+(getBfAccDelegationHistory, getBfTxDelegationCerts, getBfTxUtxo, getBfAssetTxs)
+    = (getBfAccDelegationHistory_, getBfTxDelegationCerts_, getBfTxUtxo_, getBfAssetTxs_)
     where
         getBfAccDelegationHistory_
             :<|> getBfTxDelegationCerts_
             :<|> getBfTxUtxo_
-            :<|> getBfAssetHistory_ = do
+            :<|> getBfAssetTxs_ = do
                 client (Proxy @BlockfrostAPI)
