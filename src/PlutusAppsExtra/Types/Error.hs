@@ -38,7 +38,7 @@ data TxBuilderError = TxBuilderError
     deriving (Show, Exception, Eq, Generic, FromJSON, ToJSON)
 
 data MkTxError 
-    = AllConstructorsFailed 
+    = AllConstructorsFailed [TxBuilderError]
     | CantExtractHashFromCardanoTx CardanoTx
     | CantExtractKeyHashesFromAddress Address
     | CantExtractTxOutRefsFromEmulatorTx
