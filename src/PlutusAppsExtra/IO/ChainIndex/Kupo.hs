@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 
-module PlutusAppsExtra.IO.Kupo where
+module PlutusAppsExtra.IO.ChainIndex.Kupo where
 
 import           Control.Monad                    ((<=<), join)
 import           Data.Coerce                      (coerce)

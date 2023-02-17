@@ -60,7 +60,7 @@ import           Ledger.Tx.CardanoAPI                               (unspentOutp
 import           Ledger.Typed.Scripts                               (ValidatorTypes (..))
 import           Ledger.Value                                       (leq)
 import           Network.HTTP.Client                                (HttpExceptionContent, Request)
-import           PlutusAppsExtra.IO.ChainIndex                      (getUtxosAt)
+import           PlutusAppsExtra.IO.ChainIndex                      (HasChainIndex(..), getUtxosAt)
 import           PlutusTx.IsData                                    (FromData, ToData)
 import           PlutusTx.Prelude                                   (zero, (-))
 import           Prelude                                            hiding ((-))
@@ -156,12 +156,12 @@ ownAddressesBech32 = do
     pure $ map (^. key "id"._String) as
 
 -- Get all ada at a wallet
-getWalletAda :: HasWallet m => m Ada
+getWalletAda :: (HasWallet m, HasChainIndex m) => m Ada
 getWalletAda = mconcat . fmap (Ada.fromValue . _decoratedTxOutValue) . Map.elems <$> getWalletUtxos
 
 -- Get all utxos at a wallet
-getWalletUtxos :: HasWallet m => m MapUTXO
-getWalletUtxos = ownAddresses >>= mapM (liftIO . getUtxosAt) <&> mconcat
+getWalletUtxos :: (HasWallet m, HasChainIndex m) => m MapUTXO
+getWalletUtxos = ownAddresses >>= mapM getUtxosAt <&> mconcat
 
 -- Get wallet total profit from a transaction.
 getTxProfit :: HasWallet m => CardanoTx -> MapUTXO -> m Value

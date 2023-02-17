@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE ViewPatterns     #-}
@@ -24,8 +23,8 @@ import           Network.HTTP.Client.TLS          (tlsManagerSettings)
 import           PlutusAppsExtra.Types.Error      (ConnectionError (..))
 import           PlutusAppsExtra.Utils.Address    (spkhToStakeCredential)
 import           PlutusAppsExtra.Utils.Blockfrost (AccDelegationHistoryResponse (..), AssetTxsResponse (..), Bf (..),
-                                                   BfMintingPolarity (..), BfOrder (..), TxDelegationsCertsResponse,
-                                                   TxUTxoResponseOutput (..), TxUtxoResponse (..), TxUtxoResponseInput (..))
+                                                   BfOrder (..), TxDelegationsCertsResponse, TxUTxoResponseOutput (..),
+                                                   TxUtxoResponse (..), TxUtxoResponseInput (..))
 import           Servant.API                      (Capture, Get, Header, JSON, QueryParam, (:<|>) ((:<|>)), (:>))
 import           Servant.Client                   (BaseUrl (..), ClientM, Scheme (..), client, mkClientEnv, runClientM)
 import qualified Servant.Client                   as Servant

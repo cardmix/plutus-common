@@ -34,8 +34,9 @@ library
       PlutusAppsExtra.Constraints.OffChain
       PlutusAppsExtra.Constraints.OnChain
       PlutusAppsExtra.IO.ChainIndex
+      PlutusAppsExtra.IO.ChainIndex.Kupo
+      PlutusAppsExtra.IO.ChainIndex.Plutus
       PlutusAppsExtra.IO.Blockfrost
-      PlutusAppsExtra.IO.Kupo
       PlutusAppsExtra.IO.Node
       PlutusAppsExtra.IO.Time
       PlutusAppsExtra.IO.Wallet
