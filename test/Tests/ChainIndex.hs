@@ -6,7 +6,7 @@ module Tests.ChainIndex where
 import qualified Data.Map                      as Map
 import           Data.Text                     (Text)
 import           Ledger.Tx
-import           PlutusAppsExtra.IO.ChainIndex
+import           PlutusAppsExtra.IO.ChainIndex.Plutus
 import           PlutusAppsExtra.Utils.Address
 
 testAllAddr :: IO ()
