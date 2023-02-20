@@ -16,6 +16,7 @@ import           Control.Monad.IO.Class           (MonadIO (..))
 import           Data.Default                     (Default (def))
 import           Data.Map                         (Map)
 import qualified Data.Map                         as Map
+import           Data.Maybe                       (catMaybes)
 import           GHC.Generics                     (Generic)
 import           Ledger                           (Address, DecoratedTxOut (..), POSIXTime, TxOutRef (..))
 import           Network.HTTP.Client              (HttpExceptionContent, Request)
@@ -24,13 +25,11 @@ import           Plutus.ChainIndex.Api            (UtxoAtAddressRequest (..), Ut
 import qualified Plutus.ChainIndex.Client         as Client
 import           Plutus.V1.Ledger.Address         (Address (addressCredential))
 import           PlutusAppsExtra.IO.Time          (currentTime)
-import           PlutusTx.Prelude                 hiding (fmap, mapM, mconcat, pure, traverse, (<$>), (<>))
-import           Prelude                          (IO, Show (..), fmap, traverse, (<$>), (<>))
-
-import           Data.Maybe                       (catMaybes)
 import           PlutusAppsExtra.Types.Error      (ConnectionError)
 import           PlutusAppsExtra.Utils.ChainIndex (MapUTXO)
 import           PlutusAppsExtra.Utils.Servant    (Endpoint, getFromEndpointOnPort, handle404, pattern ConnectionErrorOnPort)
+import           PlutusTx.Prelude                 hiding (fmap, mapM, mconcat, pure, traverse, (<$>), (<>))
+import           Prelude                          (IO, Show (..), fmap, traverse, (<$>), (<>))
 
 ----------------------------------- Chain index cache -----------------------------------
 
@@ -74,7 +73,7 @@ getUtxosAt addr = Map.mapMaybe id <$> foldUtxoRefsAt f Map.empty addr
     where
         f acc page' = do
           let utxoRefs = pageItems page'
-          txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+          txOuts <- traverse (fmap Just . getUnspentTxOutFromRef) utxoRefs
           let utxos = Map.fromList
                     $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
                     $ zip utxoRefs txOuts
@@ -90,7 +89,7 @@ getUtxosTxsAt addr = do
     where
         f acc page' = do
             let utxoRefs = pageItems page'
-            txOuts <- traverse (fmap Just . unspentTxOutFromRef) utxoRefs
+            txOuts <- traverse (fmap Just . getUnspentTxOutFromRef) utxoRefs
             let utxos = Map.fromList
                       $ mapMaybe (\(ref, txOut) -> fmap (ref,) txOut)
                       $ zip utxoRefs txOuts
@@ -111,8 +110,8 @@ foldUtxoRefsAt f ini addr = go ini (Just def)
             newAcc <- f acc page'
             go newAcc (nextPageQuery page')
 
-unspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
-unspentTxOutFromRef = handle404 (pure Nothing) . fmap Just . getFromEndpointChainIndex . Client.getUnspentTxOut
+getUnspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
+getUnspentTxOutFromRef = handle404 (pure Nothing) . fmap Just . getFromEndpointChainIndex . Client.getUnspentTxOut
 
 -- Get the unspent transaction output references at an address.
 utxoRefsAt :: PageQuery TxOutRef -> Address -> IO UtxosResponse

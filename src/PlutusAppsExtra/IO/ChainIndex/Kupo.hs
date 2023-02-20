@@ -28,8 +28,8 @@ import           Servant.Client                   (ClientM, client)
 getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = fromKupoUtxos <=< (getFromEndpointKupo . getKupoUtxosAt . Kupo)
 
-unspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
-unspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=<
+getUnspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
+getUnspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=<
     (getFromEndpointKupo . getKupoUnspentTxOutFromRef . Kupo)
 
 getSciptByHash :: ScriptHash -> IO (Maybe (Versioned Script))
