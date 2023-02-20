@@ -28,6 +28,8 @@ import           PlutusAppsExtra.Utils.Blockfrost (AccDelegationHistoryResponse 
 import           Servant.API                      (Capture, Get, Header, JSON, QueryParam, (:<|>) ((:<|>)), (:>))
 import           Servant.Client                   (BaseUrl (..), ClientM, Scheme (..), client, mkClientEnv, runClientM)
 import qualified Servant.Client                   as Servant
+import Data.Aeson (eitherDecodeFileStrict)
+import Data.Text (Text)
 
 tokenFilePath :: FilePath
 tokenFilePath = "blockfrost.token"
@@ -68,10 +70,10 @@ getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBf
 getAssetTxs :: CurrencySymbol -> TokenName -> IO [AssetTxsResponse]
 getAssetTxs cs name = getFromEndpointBF $ withBfToken $ \t -> getBfAssetTxs t (Bf $ AssetClass (cs, name))
 
-type BfToken = Maybe String
+type BfToken = Maybe Text
 
 withBfToken :: (BfToken -> ClientM a) -> ClientM a
-withBfToken ma = liftIO (readFile tokenFilePath) >>= ma . Just
+withBfToken ma = liftIO (eitherDecodeFileStrict tokenFilePath) >>= either error (ma . Just)
 
 getFromEndpointBF :: ClientM a -> IO a
 getFromEndpointBF endpoint = do
@@ -92,7 +94,7 @@ type BlockfrostAPI = "api" :> "v0" :>
     :<|> GetAssetTxs
     )
 
-type Auth = Header "project_id" String
+type Auth = Header "project_id" Text
 
 type GetAccDelegationHistory
     = Auth :> "accounts" :> Capture "Stake address" (Bf StakeAddress) :> "delegations" :> QueryParam "order" BfOrder :> Get '[JSON] [AccDelegationHistoryResponse]
