@@ -68,7 +68,12 @@ getAccountDelegationHistory :: StakeAddress -> IO [AccDelegationHistoryResponse]
 getAccountDelegationHistory addr = getFromEndpointBF $ withBfToken $ \t -> getBfAccDelegationHistory t (Bf addr) (Just Desc)
 
 getAssetTxs :: CurrencySymbol -> TokenName -> IO [AssetTxsResponse]
-getAssetTxs cs name = getFromEndpointBF $ withBfToken $ \t -> getBfAssetTxs t (Bf $ AssetClass (cs, name))
+getAssetTxs cs name = go 1
+    where go n = do
+            res <- getFromEndpointBF $ withBfToken $ \t -> getBfAssetTxs t (Bf $ AssetClass (cs, name)) (Just n)
+            case res of
+                [] -> pure []
+                xs -> (xs <>) <$> go (n + 1)
 
 getAssetHistory :: CurrencySymbol -> TokenName -> IO [AssetHistoryResponse]
 getAssetHistory cs name = getFromEndpointBF $ withBfToken $ \t -> getBfAssetHistory t (Bf $ AssetClass (cs, name))
@@ -107,14 +112,14 @@ type GetTxDelegationCerts
 type GetTxUtxo
     = Auth :> "txs" :> Capture "Tx hash" (Bf TxId) :> "utxos" :> Get '[JSON] TxUtxoResponse
 type GetAssetTxs
-    = Auth :> "assets" :> Capture "Policy id" (Bf AssetClass) :> "transactions" :> Get '[JSON] [AssetTxsResponse]
+    = Auth :> "assets" :> Capture "Policy id" (Bf AssetClass) :> "transactions" :> QueryParam "page" Int :> Get '[JSON] [AssetTxsResponse]
 type GetAssetHistory
     = Auth :> "assets" :> Capture "Policy id" (Bf AssetClass) :> "history" :> Get '[JSON] [AssetHistoryResponse]
 
 getBfAccDelegationHistory :: BfToken -> Bf StakeAddress -> Maybe BfOrder -> ClientM [AccDelegationHistoryResponse]
 getBfTxDelegationCerts    :: BfToken -> Bf TxId                          -> ClientM TxDelegationsCertsResponse
 getBfTxUtxo               :: BfToken -> Bf TxId                          -> ClientM TxUtxoResponse
-getBfAssetTxs             :: BfToken -> Bf AssetClass                    -> ClientM [AssetTxsResponse]
+getBfAssetTxs             :: BfToken -> Bf AssetClass   -> Maybe Int     -> ClientM [AssetTxsResponse]
 getBfAssetHistory         :: BfToken -> Bf AssetClass                    -> ClientM [AssetHistoryResponse]
 
 (getBfAccDelegationHistory, getBfTxDelegationCerts, getBfTxUtxo, getBfAssetTxs, getBfAssetHistory)
@@ -123,6 +128,6 @@ getBfAssetHistory         :: BfToken -> Bf AssetClass                    -> Clie
         getBfAccDelegationHistory_
             :<|> getBfTxDelegationCerts_
             :<|> getBfTxUtxo_
-            :<|> getBfAssetTxs_ 
+            :<|> getBfAssetTxs_
             :<|> getBfAssetHistory_ = do
                 client (Proxy @BlockfrostAPI)
