@@ -26,13 +26,13 @@ import           Plutus.V2.Ledger.Api                hiding (singleton)
 import           Prelude
 
 import           PlutusAppsExtra.Types.Error         (TxBuilderError (..))
-import           PlutusAppsExtra.Types.Tx            (TransactionBuilder, TxConstructor (..))
+import           PlutusAppsExtra.Types.Tx            (TransactionBuilder, TxConstructor (..), getBuilderResult)
 import           PlutusAppsExtra.Utils.ChainIndex    (filterPubKeyUtxos, filterScriptUtxos)
 
 (<&&>) :: (Semigroup a, Monad m) => m a -> m a -> m a
 (<&&>) = liftM2 (<>)
 
--- If Nothing is passed as the 3rd argument, adds a specific error to the list and sets txConstructorResult to Nothing.
+-- If Nothing is passed as the 3rd argument, adds the specified error to the list and sets txConstructorResult to Nothing.
 failTx :: Text -> Text -> Maybe res -> TransactionBuilder (Maybe res)
 failTx eIn eReason r = if isJust r
     then return r
@@ -45,9 +45,8 @@ failTx eIn eReason r = if isJust r
 utxosSpentPublicKeyTx :: [TxOutRef] -> TransactionBuilder ()
 utxosSpentPublicKeyTx refs = do
     mapM_ (\ref -> utxoSpentPublicKeyTx (\r _ -> ref == r)) refs
-    constr <- get
-    when (isNothing $ txConstructorResult constr) $
-        failTx "utxosSpentPublicKeyTx" "Cannot spend all provided references" Nothing $> ()
+    res <- getBuilderResult
+    when (isNothing res) $ failTx "utxosSpentPublicKeyTx" "Cannot spend all provided references" Nothing $> ()
 
 utxoSpentPublicKeyTx :: (TxOutRef -> DecoratedTxOut -> Bool) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx "utxoSpentPublicKeyTx" "No matching utxos found"
@@ -55,9 +54,9 @@ utxoSpentPublicKeyTx f = utxoSpentPublicKeyTx' f >>= failTx "utxoSpentPublicKeyT
 utxoSpentPublicKeyTx' :: (TxOutRef -> DecoratedTxOut -> Bool) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentPublicKeyTx' f = do
     constr <- get
-    let utxos   = filterPubKeyUtxos $ txConstructorLookups constr
+    let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos'  = Map.filterWithKey f utxos
+        utxos'  = Map.filterWithKey f $ filterPubKeyUtxos utxos
     if Map.null utxos'
         then return Nothing
         else do
@@ -79,9 +78,9 @@ utxoSpentScriptTx' :: ToData redeemer => (TxOutRef -> DecoratedTxOut -> Bool) ->
     (TxOutRef -> DecoratedTxOut -> redeemer) -> TransactionBuilder (Maybe (TxOutRef, DecoratedTxOut))
 utxoSpentScriptTx' f scriptVal red = do
     constr <- get
-    let utxos   = filterScriptUtxos $ txConstructorLookups constr
+    let utxos   = txConstructorLookups constr
         res     = txConstructorResult constr
-        utxos'  = Map.filterWithKey f utxos
+        utxos'  = Map.filterWithKey f $ filterScriptUtxos utxos
     if Map.null utxos'
         then return Nothing
         else do
@@ -127,21 +126,23 @@ utxoReferencedTx' f = do
 useAsCollateralTx :: Maybe TxOutRef -> TransactionBuilder (Maybe TxOutRef)
 useAsCollateralTx ref = useAsCollateralTx' ref >>= failTx "useAsCollateralTx" "No matching utxos found"
 
+-- TODO: Check if the utxo is locked by a public key
 useAsCollateralTx' :: Maybe TxOutRef -> TransactionBuilder (Maybe TxOutRef)
 useAsCollateralTx' Nothing    = return Nothing
 useAsCollateralTx' (Just ref) = do
     constr <- get
     let utxos = txConstructorLookups constr
         res   = txConstructorResult constr
-    if Map.member ref utxos
-        then do
-            let cons = mustUseOutputAsCollateral ref
+    case Map.lookup ref utxos of
+        Nothing -> return Nothing
+        Just o  -> do
+            let lookups = unspentOutputs (Map.fromList [(ref, o)])
+                cons    = mustUseOutputAsCollateral ref
             put constr  { 
-                            txConstructorResult = res <&&> Just (mempty, cons),
+                            txConstructorResult = res <&&> Just (lookups, cons),
                             txConstructorLookups = Map.delete ref utxos
                         }
             return $ Just ref
-        else return Nothing
 
 utxoProducedTx :: ToData datum => Address -> Value -> Maybe datum -> TransactionBuilder ()
 utxoProducedTx addr val dat = do

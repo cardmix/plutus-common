@@ -6,9 +6,15 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
 
+<<<<<<<< HEAD:src/PlutusAppsExtra/IO/ChainIndex/Kupo.hs
 module PlutusAppsExtra.IO.ChainIndex.Kupo where
 
 import           Control.Monad                    ((<=<), join)
+========
+module PlutusAppsExtra.IO.Kupo where
+
+import           Control.Monad                    ((<=<))
+>>>>>>>> main:src/PlutusAppsExtra/IO/Kupo.hs
 import           Data.Coerce                      (coerce)
 import           Data.Data                        (Proxy (..))
 import qualified Data.Map                         as Map
@@ -28,8 +34,13 @@ import           Servant.Client                   (ClientM, client)
 getUtxosAt :: Address -> IO MapUTXO
 getUtxosAt = fromKupoUtxos <=< (getFromEndpointKupo . getKupoUtxosAt . Kupo)
 
+<<<<<<<< HEAD:src/PlutusAppsExtra/IO/ChainIndex/Kupo.hs
 getUnspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
 getUnspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=<
+========
+unspentTxOutFromRef :: TxOutRef -> IO (Maybe DecoratedTxOut)
+unspentTxOutFromRef = sequence . listToMaybe . fmap fromKupoDecoratedTxOut <=< 
+>>>>>>>> main:src/PlutusAppsExtra/IO/Kupo.hs
     (getFromEndpointKupo . getKupoUnspentTxOutFromRef . Kupo)
 
 getSciptByHash :: ScriptHash -> IO (Maybe (Versioned Script))
@@ -64,8 +75,13 @@ type GetDatumByHash     =
 
 getKupoUtxosAt             :: Kupo Address       -> ClientM KupoUTXOs
 getKupoUnspentTxOutFromRef :: Kupo TxOutRef      -> ClientM [KupoDecoratedTxOut]
+<<<<<<<< HEAD:src/PlutusAppsExtra/IO/ChainIndex/Kupo.hs
 getKupoScriptByHash        :: Kupo ScriptHash    -> ClientM (Maybe (Kupo (Versioned Script)))
 getKupoValidatorByHash     :: Kupo ValidatorHash -> ClientM (Maybe (Kupo (Versioned Validator)))
+========
+getKupoScriptByHash        :: Kupo ScriptHash    -> ClientM (Kupo (Versioned Script))
+getKupoValidatorByHash     :: Kupo ValidatorHash -> ClientM (Kupo (Versioned Validator))
+>>>>>>>> main:src/PlutusAppsExtra/IO/Kupo.hs
 getKupoDatumByHash         :: Kupo DatumHash     -> ClientM (Kupo Datum)
 (getKupoUtxosAt, getKupoUnspentTxOutFromRef, getKupoScriptByHash, getKupoValidatorByHash, getKupoDatumByHash)
     = ((`getKupoUtxosAt_` True)
