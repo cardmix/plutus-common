@@ -159,7 +159,7 @@ data RestoreWallet = RestoreWallet
 instance FromJSON RestoreWallet where
     parseJSON = withObject "Restore wallet" $ \v -> do 
         name                   <- v .: "name"
-        mnemonicSentence       <- v .: "mnemonic_sentence" >>= either (fail . show) pure . mkSomeMnemonic @'[ 24 ]
+        mnemonicSentence       <- v .: "mnemonic_sentence" >>= either (fail . show) pure . mkSomeMnemonic @'[ 9, 12, 15, 18, 21, 24 ]
         passphrase             <- v .: "passphrase"        <&> Passphrase . fromString . T.unpack
         pure RestoreWallet{..}
 
